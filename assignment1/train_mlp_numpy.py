@@ -43,7 +43,7 @@ def confusion_matrix(predictions, targets):
 
     Args:
       predictions: 2D float array of size [batch_size, n_classes], predictions of the model (logits)
-      labels: 1D int array of size [batch_size]. Ground truth labels for
+      targets: 1D int array of size [batch_size]. Ground truth labels for
               each sample in the batch
     Returns:
       confusion_matrix: confusion matrix per class, 2D float array of size [n_classes, n_classes]
@@ -53,7 +53,10 @@ def confusion_matrix(predictions, targets):
     # PUT YOUR CODE HERE  #
     #######################
     unique_labels = np.unique(targets)
-    predicted_labels = np.argmax(predictions, axis=1)
+    if len(predictions.shape) == 2:
+        predicted_labels = np.argmax(predictions, axis=1)
+    else:
+        predicted_labels = predictions
     assert len(predicted_labels) == len(targets)
     conf_mat = np.zeros((len(unique_labels), len(unique_labels)))
     for true_label_idx, true_label in enumerate(unique_labels):
@@ -72,6 +75,7 @@ def confusion_matrix_to_metrics(confusion_matrix, beta=1.0):
     Converts a confusion matrix to accuracy, precision, recall and f1 scores.
     Args:
         confusion_matrix: 2D float array of size [n_classes, n_classes], the confusion matrix to convert
+        beta: beta parameter for f_beta score calculation
     Returns: a dictionary with the following keys:
         accuracy: scalar float, the accuracy of the confusion matrix
         precision: 1D float array of size [n_classes], the precision for each class
@@ -125,10 +129,10 @@ def evaluate_model(model, data_loader, num_classes=10):
     #######################
     epoch_preds = []
     epoch_labels = []
+    batch_losses = []
 
     batch_size, s1, s2, s3 = list(next(iter(data_loader))[0].shape)
     input_size = s1 * s2 * s3
-    batch_losses = []
     loss_module = CrossEntropyModule(num_classes=10)
     for batch_idx, (inputs, labels) in (
         batch_pbar := tqdm(enumerate(data_loader), total=len(data_loader), leave=False)
@@ -255,7 +259,10 @@ def train(hidden_dims, lr, batch_size, epochs, seed, data_dir):
             best_model_in_epoch = epoch
         epoch_pbar.set_postfix(
             {
-                "Training loss": f"{training_loss:.2f}, validation accuracy: {val_metrics['accuracy']}"
+                "Tr loss": f"{training_loss:.2f}",
+                # "Tr acc": f"{training_accuracy:.2f}",
+                "val loss": f"{val_metrics['loss']:.2f}",
+                "val acc": f"{val_metrics['accuracy']:.2f}",
             }
         )
 
@@ -273,24 +280,28 @@ def train(hidden_dims, lr, batch_size, epochs, seed, data_dir):
     return model, logging_info["validation_accuracies"], test_accuracy, logging_info
 
 
-def visualize(logging_info):
+def visualize(logging_info, model_name=""):
     plt.style.use("seaborn-v0_8")
 
-    fig, ax = plt.subplots(layout="constrained")
+    # fig, ax = plt.subplots(layout="constrained")
+    fig = plt.figure()
+    fig.suptitle(f"Change of losses an accuracies over training epochs - {model_name}")
+    ax = plt.subplot(1, 2, 1)
     ax.plot(logging_info["training_losses"], label="Training loss")
     ax.plot(logging_info["validation_losses"], label="Validation loss")
-    ax2 = ax.twinx()
-    ax2.plot(logging_info["validation_accuracies"], label="Validation accuracy")
+    # ax2 = ax.twinx()
     ax.set_xlabel("Epochs")
     ax.set_ylabel("Loss")
-    ax2.set_ylabel("Accuracy")
-    ax.set_title("Change of losses an accuracies over training epochs")
     ax.grid(False)
-    ax2.grid(False)
-    ax2.legend()
     ax.legend()
 
-    plt.savefig("mlp_losses.svg")
+    ax2 = plt.subplot(1, 2, 2)
+    ax2.plot(logging_info["validation_accuracies"], label="Validation accuracy")
+    ax2.set_ylabel("Accuracy")
+    ax2.grid(False)
+    ax2.legend()
+
+    plt.savefig(f"mlp_losses_{model_name}.png")
 
 
 if __name__ == "__main__":
@@ -327,4 +338,4 @@ if __name__ == "__main__":
 
     model, validation_accuracies, test_accuracy, logging_info = train(**kwargs)
     # Feel free to add any additional functions, such as plotting of the loss curve here
-    visualize(logging_info)
+    visualize(logging_info, model_name="MLP NumPy")
