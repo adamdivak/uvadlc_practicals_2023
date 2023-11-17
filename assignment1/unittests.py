@@ -17,8 +17,9 @@ import unittest
 import numpy as np
 
 from cifar10_utils import get_cifar10
-from modules import LinearModule, SoftMaxModule, CrossEntropyModule
+from modules import LinearModule, SoftMaxModule, CrossEntropyModule, one_hot
 from modules import ELUModule
+import torch
 
 
 def rel_error(x, y):
@@ -28,9 +29,8 @@ def rel_error(x, y):
 def eval_numerical_gradient(f, x, verbose=True, h=0.00001):
     fx = f(x)
     grad = np.zeros_like(x)
-    it = np.nditer(x, flags=['multi_index'], op_flags=['readwrite'])
+    it = np.nditer(x, flags=["multi_index"], op_flags=["readwrite"])
     while not it.finished:
-
         ix = it.multi_index
         oldval = x[ix]
         x[ix] = oldval + h
@@ -49,7 +49,7 @@ def eval_numerical_gradient(f, x, verbose=True, h=0.00001):
 
 def eval_numerical_gradient_array(f, x, df, h=1e-5):
     grad = np.zeros_like(x)
-    it = np.nditer(x, flags=['multi_index'], op_flags=['readwrite'])
+    it = np.nditer(x, flags=["multi_index"], op_flags=["readwrite"])
     while not it.finished:
         ix = it.multi_index
 
@@ -66,7 +66,6 @@ def eval_numerical_gradient_array(f, x, df, h=1e-5):
 
 
 class TestLosses(unittest.TestCase):
-
     def test_crossentropy_loss(self):
         np.random.seed(42)
         rel_error_max = 1e-5
@@ -85,9 +84,21 @@ class TestLosses(unittest.TestCase):
             grads_num = eval_numerical_gradient(f, X, verbose=False, h=1e-5)
             self.assertLess(rel_error(grads_num, grads), rel_error_max)
 
+    def test_one_hot(self):
+        np.random.seed(42)
+
+        for test_num in range(10):
+            N = np.random.choice(range(1, 100))
+            C = np.random.choice(range(1, 10))
+            y = np.random.randint(C, size=(N,))
+
+            Y = one_hot(y)
+            Y_gt = torch.nn.functional.one_hot(torch.from_numpy(y))
+
+            self.assertTrue((Y == Y_gt.numpy()).all())
+
 
 class TestLayers(unittest.TestCase):
-
     def test_linear_backward(self):
         np.random.seed(42)
         rel_error_max = 1e-5
@@ -103,9 +114,13 @@ class TestLayers(unittest.TestCase):
 
             out = layer.forward(x)
             dx = layer.backward(dout)
-            dw = layer.grads['weight']
-            dx_num = eval_numerical_gradient_array(lambda xx: layer.forward(xx), x, dout)
-            dw_num = eval_numerical_gradient_array(lambda w: layer.forward(x), layer.params['weight'], dout)
+            dw = layer.grads["weight"]
+            dx_num = eval_numerical_gradient_array(
+                lambda xx: layer.forward(xx), x, dout
+            )
+            dw_num = eval_numerical_gradient_array(
+                lambda w: layer.forward(x), layer.params["weight"], dout
+            )
 
             self.assertLess(rel_error(dx, dx_num), rel_error_max)
             self.assertLess(rel_error(dw, dw_num), rel_error_max)
@@ -124,7 +139,9 @@ class TestLayers(unittest.TestCase):
 
             _ = layer.forward(x)
             dx = layer.backward(dout)
-            dx_num = eval_numerical_gradient_array(lambda xx: layer.forward(xx), x, dout)
+            dx_num = eval_numerical_gradient_array(
+                lambda xx: layer.forward(xx), x, dout
+            )
 
             self.assertLess(rel_error(dx, dx_num), rel_error_max)
 
@@ -142,12 +159,14 @@ class TestLayers(unittest.TestCase):
 
             _ = layer.forward(x)
             dx = layer.backward(dout)
-            dx_num = eval_numerical_gradient_array(lambda xx: layer.forward(xx), x, dout)
+            dx_num = eval_numerical_gradient_array(
+                lambda xx: layer.forward(xx), x, dout
+            )
 
             self.assertLess(rel_error(dx, dx_num), rel_error_max)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     suite = unittest.TestLoader().loadTestsFromTestCase(TestLosses)
     unittest.TextTestRunner(verbosity=2).run(suite)
 

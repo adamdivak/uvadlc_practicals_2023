@@ -52,7 +52,32 @@ class MLP(object):
         #######################
         # PUT YOUR CODE HERE  #
         #######################
-        pass
+        self.layers = []
+
+        layer_input_size = n_inputs
+        is_input_layer = True
+        for i, hidden_layer_size in enumerate(n_hidden):
+            self.layers.append(
+                LinearModule(
+                    in_features=layer_input_size,
+                    out_features=hidden_layer_size,
+                    input_layer=is_input_layer,
+                    name=f"hidden_{i}",
+                )
+            )
+            self.layers.append(ELUModule())
+            is_input_layer = False
+            layer_input_size = hidden_layer_size
+
+        self.layers.append(
+            LinearModule(
+                in_features=layer_input_size,
+                out_features=n_classes,
+                input_layer=is_input_layer,
+                name="last_linear",
+            )
+        )
+        self.layers.append(SoftMaxModule())
         #######################
         # END OF YOUR CODE    #
         #######################
@@ -74,7 +99,11 @@ class MLP(object):
         #######################
         # PUT YOUR CODE HERE  #
         #######################
-
+        y = None
+        for layer in self.layers:
+            y = layer.forward(x)
+            x = y  # not really necessary, just to make things clear
+        out = y
         #######################
         # END OF YOUR CODE    #
         #######################
@@ -95,7 +124,10 @@ class MLP(object):
         #######################
         # PUT YOUR CODE HERE  #
         #######################
-        pass
+        d_current = dout
+        for layer in self.layers[::-1]:
+            d_previous = layer.backward(d_current)
+            d_current = d_previous  # not really necessary, just to make things clear
         #######################
         # END OF YOUR CODE    #
         #######################
@@ -108,7 +140,7 @@ class MLP(object):
         TODO:
         Iterate over modules and call the 'clear_cache' function.
         """
-        
+
         #######################
         # PUT YOUR CODE HERE  #
         #######################
@@ -116,3 +148,11 @@ class MLP(object):
         #######################
         # END OF YOUR CODE    #
         #######################
+
+    def update_weights(self, lr):
+        for layer in self.layers:
+            layer.update_weights(lr)
+
+    def print_debug(self):
+        for layer in self.layers:
+            layer.print_debug()
