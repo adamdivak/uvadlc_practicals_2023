@@ -33,79 +33,56 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from train_mlp_numpy import visualize
+from train_mlp_numpy import (
+    visualize,
+    confusion_matrix,
+    confusion_matrix_to_metrics,
+    calculate_f_beta,
+)
 
+# Import from the NumPy omdule instead of duplicating it
+# def confusion_matrix(predictions, targets):
+#     """
+#     Computes the confusion matrix, i.e. the number of true positives, false positives, true negatives and false negatives.
+#
+#     Args:
+#       predictions: 2D float array of size [batch_size, n_classes], predictions of the model (logits)
+#       targets: 1D int array of size [batch_size]. Ground truth labels for
+#               each sample in the batch
+#     Returns:
+#       confusion_matrix: confusion matrix per class, 2D float array of size [n_classes, n_classes]
+#     """
+#
+#     #######################
+#     # PUT YOUR CODE HERE  #
+#     #######################
 
-def confusion_matrix(predictions, targets):
-    """
-    Computes the confusion matrix, i.e. the number of true positives, false positives, true negatives and false negatives.
-
-    Args:
-      predictions: 2D float array of size [batch_size, n_classes], predictions of the model (logits)
-      targets: 1D int array of size [batch_size]. Ground truth labels for
-              each sample in the batch
-    Returns:
-      confusion_matrix: confusion matrix per class, 2D float array of size [n_classes, n_classes]
-    """
-
-    #######################
-    # PUT YOUR CODE HERE  #
-    #######################
-    # copied from the NumPy solution
-    unique_labels = np.unique(targets)
-    if len(predictions.shape) == 2:
-        predicted_labels = np.argmax(predictions, axis=1)
-    else:
-        predicted_labels = predictions
-    assert len(predicted_labels) == len(targets)
-    conf_mat = np.zeros((len(unique_labels), len(unique_labels)))
-    for true_label_idx, true_label in enumerate(unique_labels):
-        for predicted_label_idx, predicted_label in enumerate(unique_labels):
-            conf_mat[true_label_idx, predicted_label_idx] = (
-                (targets == true_label) & (predicted_labels == predicted_label)
-            ).sum()
-    #######################
-    # END OF YOUR CODE    #
-    #######################
-    return conf_mat
-
-
-def confusion_matrix_to_metrics(confusion_matrix, beta=1.0):
-    """
-    Converts a confusion matrix to accuracy, precision, recall and f1 scores.
-    Args:
-        confusion_matrix: 2D float array of size [n_classes, n_classes], the confusion matrix to convert
-        beta: beta parameter for f_beta score calculation
-    Returns: a dictionary with the following keys:
-        accuracy: scalar float, the accuracy of the confusion matrix
-        precision: 1D float array of size [n_classes], the precision for each class
-        recall: 1D float array of size [n_classes], the recall for each clas
-        f1_beta: 1D float array of size [n_classes], the f1_beta scores for each class
-    """
-    #######################
-    # PUT YOUR CODE HERE  #
-    #######################
-    # copied from the NumPy solution
-    tp = np.diagonal(confusion_matrix).sum()
-    total = confusion_matrix.sum()
-
-    metrics = {}
-    metrics["accuracy"] = tp / total
-    # precision: tp / (tp + fp), so we need all predictions for a given class in the denominator -> column-wise sum
-    metrics["precision"] = np.diagonal(confusion_matrix) / confusion_matrix.sum(axis=0)
-    # precision: tp / (tp + fn), so we need all true occurrences for a given class in the denominator -> row-wise sum
-    metrics["recall"] = np.diagonal(confusion_matrix) / confusion_matrix.sum(axis=1)
-    # f1_beta
-    metrics["f1_beta"] = (
-        (1 + beta**2)
-        * metrics["precision"]
-        * metrics["recall"]
-        / (beta**2 * metrics["precision"] + metrics["recall"])
-    )
-    #######################
-    # END OF YOUR CODE    #
-    #######################
-    return metrics
+#     #######################
+#     # END OF YOUR CODE    #
+#     #######################
+#     return conf_mat
+#
+#
+# def confusion_matrix_to_metrics(confusion_matrix, beta=1.0):
+#     """
+#     Converts a confusion matrix to accuracy, precision, recall and f1 scores.
+#     Args:
+#         confusion_matrix: 2D float array of size [n_classes, n_classes], the confusion matrix to convert
+#         beta: beta parameter for f_beta score calculation
+#     Returns: a dictionary with the following keys:
+#         accuracy: scalar float, the accuracy of the confusion matrix
+#         precision: 1D float array of size [n_classes], the precision for each class
+#         recall: 1D float array of size [n_classes], the recall for each clas
+#         f1_beta: 1D float array of size [n_classes], the f1_beta scores for each class
+#     """
+#     #######################
+#     # PUT YOUR CODE HERE  #
+#     #######################
+#
+#     #######################
+#     # END OF YOUR CODE    #
+#     #######################
+#     return metrics
 
 
 def evaluate_model(model, data_loader, num_classes=10):
@@ -155,6 +132,7 @@ def evaluate_model(model, data_loader, num_classes=10):
     cm = confusion_matrix(epoch_preds, epoch_labels)
     metrics = confusion_matrix_to_metrics(cm)
     metrics["loss"] = np.mean(batch_losses)
+    metrics["confusion_matrix"] = cm
     #######################
     # END OF YOUR CODE    #
     #######################
@@ -256,12 +234,14 @@ def train(hidden_dims, lr, use_batch_norm, batch_size, epochs, seed, data_dir):
             # data_, target_ = data_.to(device), target_.to(device)# on GPU
             # zero the parameter gradients
             optimizer.zero_grad()
+
             # forward + backward + optimize
             outputs = model(data_)
             loss = loss_module(outputs, target_)
             loss.backward()
             optimizer.step()
-            # print statistics
+
+            # calculate statistics
             running_loss += loss.item()
             _, pred = torch.max(outputs, dim=1)
             correct += torch.sum(pred == target_).item()
@@ -280,7 +260,6 @@ def train(hidden_dims, lr, use_batch_norm, batch_size, epochs, seed, data_dir):
         logging_info["validation_losses"].append(val_metrics["loss"])
 
         if best_model_accuracy < val_metrics["accuracy"]:
-            # model.clear_cache()
             best_model = deepcopy(model)
             torch.save(model.state_dict(), "best_model_classification.pt")
             best_model_accuracy = val_metrics["accuracy"]
@@ -302,12 +281,21 @@ def train(hidden_dims, lr, use_batch_norm, batch_size, epochs, seed, data_dir):
     # TODO: Test best model
     test_metrics = evaluate_model(best_model, cifar10_loader["test"])
     test_accuracy = test_metrics["accuracy"]
+    test_metrics["f_betas"] = calculate_f_beta(test_metrics, [0.1, 1.0, 10.0])
     # TODO: Add any information you might want to save for plotting
     #######################
     # END OF YOUR CODE    #
     #######################
 
-    return model, logging_info["validation_accuracies"], test_accuracy, logging_info
+    return (
+        model,
+        # this is also returned as part of logging_info, only kept here because it was part of the
+        # original signature
+        logging_info["validation_accuracies"],
+        test_accuracy,
+        test_metrics,
+        logging_info,
+    )
 
 
 if __name__ == "__main__":
@@ -347,6 +335,14 @@ if __name__ == "__main__":
     args = parser.parse_args()
     kwargs = vars(args)
 
-    model, validation_accuracies, test_accuracy, logging_info = train(**kwargs)
+    (model, validation_accuracies, test_accuracy, test_metrics, logging_info) = train(
+        **kwargs
+    )
+
     # Feel free to add any additional functions, such as plotting of the loss curve here
-    visualize(logging_info, model_name="MLP PyTorch")
+    visualize(
+        logging_info=logging_info,
+        confusion_matrix=test_metrics["confusion_matrix"],
+        f_betas=test_metrics["f_betas"],
+        model_name="MLP PyTorch",
+    )

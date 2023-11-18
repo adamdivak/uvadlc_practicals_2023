@@ -79,21 +79,24 @@ class MLP(nn.Module):
         layers = []
         layer_input_size = n_inputs
         for i, hidden_layer_size in enumerate(n_hidden):
-            layer = torch.nn.Linear(
-                in_features=layer_input_size,
-                out_features=hidden_layer_size,
+            layers.append(
+                torch.nn.Linear(
+                    in_features=layer_input_size,
+                    out_features=hidden_layer_size,
+                )
             )
-            layers.append(layer)
 
             layers.append(torch.nn.ELU())
-            # is_input_layer = False
             layer_input_size = hidden_layer_size
 
-        layer = torch.nn.Linear(
-            in_features=layer_input_size,
-            out_features=n_classes,
+        layers.append(
+            torch.nn.Linear(
+                in_features=layer_input_size,
+                out_features=n_classes,
+            )
         )
-        layers.append(layer)
+
+        layers.append(torch.nn.Softmax())
 
         self.layers = nn.ModuleList(layers)
         kaiming_init(self)

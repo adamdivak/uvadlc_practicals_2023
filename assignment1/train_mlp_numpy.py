@@ -33,6 +33,7 @@ from modules import CrossEntropyModule
 import cifar10_utils
 
 from matplotlib import pylab as plt
+import seaborn as sns
 
 import torch
 
@@ -70,6 +71,18 @@ def confusion_matrix(predictions, targets):
     return conf_mat
 
 
+def calculate_f_beta(metrics, betas):
+    return {
+        beta: (
+            (1 + beta**2)
+            * metrics["precision"]
+            * metrics["recall"]
+            / (beta**2 * metrics["precision"] + metrics["recall"])
+        )
+        for beta in betas
+    }
+
+
 def confusion_matrix_to_metrics(confusion_matrix, beta=1.0):
     """
     Converts a confusion matrix to accuracy, precision, recall and f1 scores.
@@ -95,12 +108,7 @@ def confusion_matrix_to_metrics(confusion_matrix, beta=1.0):
     # precision: tp / (tp + fn), so we need all true occurrences for a given class in the denominator -> row-wise sum
     metrics["recall"] = np.diagonal(confusion_matrix) / confusion_matrix.sum(axis=1)
     # f1_beta
-    metrics["f1_beta"] = (
-        (1 + beta**2)
-        * metrics["precision"]
-        * metrics["recall"]
-        / (beta**2 * metrics["precision"] + metrics["recall"])
-    )
+    metrics["f1_beta"] = calculate_f_beta(metrics, [beta])[beta]
     #######################
     # END OF YOUR CODE    #
     #######################
@@ -152,6 +160,7 @@ def evaluate_model(model, data_loader, num_classes=10):
     cm = confusion_matrix(epoch_preds, epoch_labels)
     metrics = confusion_matrix_to_metrics(cm)
     metrics["loss"] = np.mean(batch_losses)
+    metrics["confusion_matrix"] = cm
     #######################
     # END OF YOUR CODE    #
     #######################
@@ -206,8 +215,9 @@ def train(hidden_dims, lr, batch_size, epochs, seed, data_dir):
 
     logging_info = {
         "training_losses": [],
-        "validation_accuracies": [],
+        "training_accuracies": [],
         "validation_losses": [],
+        "validation_accuracies": [],
     }
     # TODO: Initialize model and loss module
     batch_size, s1, s2, s3 = list(next(iter(cifar10_loader["train"]))[0].shape)
@@ -223,6 +233,8 @@ def train(hidden_dims, lr, batch_size, epochs, seed, data_dir):
     for epoch in (epoch_pbar := tqdm(range(1, epochs + 1))):
         epoch_pbar.set_description(f"Epoch: {epoch}")
         batch_losses = []
+        samples_in_epoch = 0
+        correct_predictions_in_epoch = 0
         for batch_idx, (inputs, labels) in (
             batch_pbar := tqdm(
                 enumerate(cifar10_loader["train"]),
@@ -235,6 +247,13 @@ def train(hidden_dims, lr, batch_size, epochs, seed, data_dir):
                 -1, input_size
             )  # flatten input image correctly, even if the last batch does not have a full size
             pred = model.forward(inputs_flattened)
+
+            # only for calculating the training accuracy
+            pred_label = np.argmax(pred, axis=1)
+            correct_pred = (pred_label == labels).sum()
+            correct_predictions_in_epoch += correct_pred
+            samples_in_epoch += len(labels)
+
             loss = loss_module.forward(pred, labels)
             batch_losses.append(loss)
             loss_grad = loss_module.backward(pred, labels)
@@ -247,6 +266,8 @@ def train(hidden_dims, lr, batch_size, epochs, seed, data_dir):
             batch_pbar.set_postfix({"Batch loss": f"{loss:.2f}"})
         training_loss = np.mean(batch_losses)
         logging_info["training_losses"].append(training_loss)
+        training_accuracy = correct_predictions_in_epoch / samples_in_epoch
+        logging_info["training_accuracies"].append(training_accuracy)
 
         val_metrics = evaluate_model(model, cifar10_loader["validation"])
         logging_info["validation_accuracies"].append(val_metrics["accuracy"])
@@ -260,7 +281,7 @@ def train(hidden_dims, lr, batch_size, epochs, seed, data_dir):
         epoch_pbar.set_postfix(
             {
                 "Tr loss": f"{training_loss:.2f}",
-                # "Tr acc": f"{training_accuracy:.2f}",
+                "Tr acc": f"{training_accuracy:.2f}",
                 "val loss": f"{val_metrics['loss']:.2f}",
                 "val acc": f"{val_metrics['accuracy']:.2f}",
             }
@@ -272,36 +293,68 @@ def train(hidden_dims, lr, batch_size, epochs, seed, data_dir):
     # TODO: Test best model
     test_metrics = evaluate_model(best_model, cifar10_loader["test"])
     test_accuracy = test_metrics["accuracy"]
+    test_metrics["f_betas"] = calculate_f_beta(test_metrics, [0.1, 1.0, 10.0])
     # TODO: Add any information you might want to save for plotting
     #######################
     # END OF YOUR CODE    #
     #######################
 
-    return model, logging_info["validation_accuracies"], test_accuracy, logging_info
+    return (
+        model,
+        # this is also returned as part of logging_info, only kept here because it was part of the
+        # original signature
+        logging_info["validation_accuracies"],
+        test_accuracy,
+        test_metrics,
+        logging_info,
+    )
 
 
-def visualize(logging_info, model_name=""):
+def visualize(logging_info, confusion_matrix, f_betas, model_name=""):
     plt.style.use("seaborn-v0_8")
 
-    # fig, ax = plt.subplots(layout="constrained")
+    # Accuracy and loss
     fig = plt.figure()
     fig.suptitle(f"Change of losses an accuracies over training epochs - {model_name}")
     ax = plt.subplot(1, 2, 1)
     ax.plot(logging_info["training_losses"], label="Training loss")
     ax.plot(logging_info["validation_losses"], label="Validation loss")
-    # ax2 = ax.twinx()
     ax.set_xlabel("Epochs")
     ax.set_ylabel("Loss")
     ax.grid(False)
     ax.legend()
 
     ax2 = plt.subplot(1, 2, 2)
+    ax2.plot(logging_info["training_accuracies"], label="Training accuracy")
     ax2.plot(logging_info["validation_accuracies"], label="Validation accuracy")
     ax2.set_ylabel("Accuracy")
     ax2.grid(False)
     ax2.legend()
 
     plt.savefig(f"mlp_losses_{model_name}.png")
+
+    # Confusion matrix
+    fig = plt.figure()
+    ax = sns.heatmap(confusion_matrix, annot=True)
+    ax.set_xlabel("Predicted label")
+    ax.set_ylabel("True label")
+    plt.title(f"Confusion matrix - {model_name}")
+    plt.savefig(f"mlp_conf_mat_{model_name}.png")
+
+    # f_beta scores
+    # using Pandas here would be much more convenient. For seaborn the only way I found
+    # was to manually re-order the dictionary to show a grouped bar plot
+    f_beta_flat = {"beta": [], "class": [], "score": []}
+    for beta, scores in f_betas.items():
+        for class_idx, score in enumerate(scores):
+            f_beta_flat["beta"].append(beta)
+            f_beta_flat["class"].append(class_idx)
+            f_beta_flat["score"].append(score)
+    fig = plt.figure()
+    sns.barplot(data=f_beta_flat, x="class", y="score", hue="beta")
+    # ax.grid(False)
+    plt.title(f"F_Beta scores per class for different Beta values - {model_name}")
+    plt.savefig(f"mlp_f_beta_{model_name}.png")
 
 
 if __name__ == "__main__":
@@ -336,6 +389,18 @@ if __name__ == "__main__":
     args = parser.parse_args()
     kwargs = vars(args)
 
-    model, validation_accuracies, test_accuracy, logging_info = train(**kwargs)
+    (
+        model,
+        validation_accuracies,
+        test_accuracy,
+        test_metrics,
+        logging_info,
+    ) = train(**kwargs)
+
     # Feel free to add any additional functions, such as plotting of the loss curve here
-    visualize(logging_info, model_name="MLP NumPy")
+    visualize(
+        logging_info=logging_info,
+        confusion_matrix=test_metrics["confusion_matrix"],
+        f_betas=test_metrics["f_betas"],
+        model_name="MLP NumPy",
+    )
