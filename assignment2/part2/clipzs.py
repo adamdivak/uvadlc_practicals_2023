@@ -177,15 +177,15 @@ class ZeroshotCLIP(nn.Module):
         # END OF YOUR CODE    #
         #######################
 
-    def model_inference(self, image):
+    def model_inference(self, images):
         """
-        Performs inference on a single image.
+        Performs inference on a batch of images.
 
         Args:
-            image (torch.Tensor): image tensor of shape (3, 224, 224)
+            image (torch.Tensor): image tensor of shape (batch_size, 3, 224, 224)
 
         Returns:
-            logits (torch.Tensor): logits of shape (num_classes,)
+            logits (torch.Tensor): logits of shape (batch_size, num_classes,)
         """
 
         #######################
