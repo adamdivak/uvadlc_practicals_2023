@@ -141,6 +141,8 @@ def train_model(
                 leave=False,
             )
         ):
+            data_, target_ = data_.to(device), target_.to(device)
+
             # log some debug info in the very first batch
             if epoch == 1 and batch_idx == 0:
                 # save model
@@ -152,7 +154,6 @@ def train_model(
                 # write to tensorboard
                 writer.add_image("first_training_batch", img_grid)
 
-            data_, target_ = data_.to(device), target_.to(device)
             # zero the parameter gradients
             optimizer.zero_grad()
 
@@ -317,7 +318,7 @@ def main(lr, batch_size, epochs, data_dir, seed, augmentation_name, test_noise):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Load the model
-    model = get_model()
+    model = get_model().to(device)
 
     # Get the augmentation to use
     # we just pass the name here, nothing to do
