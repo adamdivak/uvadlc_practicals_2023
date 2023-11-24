@@ -55,15 +55,16 @@ def get_model(num_classes=100):
     #######################
 
     # Get the pretrained ResNet18 model on ImageNet from torchvision.models
-    model = models.resnet18()
+    # Don't forget pretrained=True as I did first..
+    model = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
 
     # Randomly initialize and modify the model's last layer for CIFAR100.
     model.requires_grad_(False)  # freeze all layers
     # print(model) # used for manually checking the model structure and picking the last layer to unfreeze
-    model.fc.weight.requires_grad = True  # unfreeze the weights of the last layer
-    model.fc.bias.requires_grad = True  # don't forget the bias!
-    model.fc.weight.data.normal_(0, 0.01)  # re-initialize the last layer
-    model.fc.bias.data.fill_(0)
+
+    # Replace the last layer with one that has the correct output shape
+    # It also set requires_grad=True for this specific layer
+    model.fc = torch.nn.Linear(model.fc.in_features, num_classes)
 
     #######################
     # END OF YOUR CODE    #
@@ -119,7 +120,7 @@ def train_model(
 
     # Initialize the optimizer (Adam) to train the last layer of the model.
     loss_module = nn.CrossEntropyLoss()
-    optimizer = torch.optim.SGD(model.parameters(), lr=lr)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
     # Training loop with validation after each epoch. Save the best model.
     best_model_accuracy = -np.inf
@@ -187,6 +188,7 @@ def train_model(
                 {
                     "Batch loss": f"{loss:.2f}",
                     "Running training loss": running_training_loss,
+                    "Running training accuracy": running_training_accuracy,
                 }
             )
 
@@ -280,8 +282,8 @@ def evaluate_model(model, data_loader, device):
             loss_t = loss_module(outputs_t, target_t)
             batch_losses.append(loss_t.item())
             _, pred_t = torch.max(outputs_t, dim=1)
-            epoch_preds.append(pred_t.numpy())
-            epoch_labels.append(target_t.numpy())
+            epoch_preds.append(pred_t.cpu().numpy())
+            epoch_labels.append(target_t.cpu().numpy())
             batch_pbar.set_description(f"Eval batch: {batch_idx:5}")
 
     epoch_preds = np.concatenate(epoch_preds)
