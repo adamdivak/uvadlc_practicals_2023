@@ -65,6 +65,7 @@ def get_model(num_classes=100):
     # Replace the last layer with one that has the correct output shape
     # It also set requires_grad=True for this specific layer
     model.fc = torch.nn.Linear(model.fc.in_features, num_classes)
+    model.fc.weight.data.normal_(0, 0.01)  # initialize as requested in the exercise
 
     #######################
     # END OF YOUR CODE    #
