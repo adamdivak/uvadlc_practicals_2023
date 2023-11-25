@@ -121,7 +121,7 @@ class ZeroshotCLIP(nn.Module):
         clip_model.to(args.device)
 
         # if device is CPU, then make model as float() (This is a CLIP hack)
-        if args.device == "cpu":
+        if args.device == "cpu" or args.device == "mps":
             clip_model = clip_model.float()
 
         prompts = [template.format(c.replace("_", " ")) for c in classnames]

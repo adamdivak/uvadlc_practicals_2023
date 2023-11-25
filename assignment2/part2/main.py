@@ -154,8 +154,7 @@ def parse_option():
         if torch.cuda.is_available():
             device = "cuda"
         # mac MPS support: https://pytorch.org/docs/stable/notes/mps.html
-        # FIXME does not work for some reason :( error: 'mps.select' op failed to verify that all of {true_value, false_value, result} have same element type
-        elif False and torch.backends.mps.is_available():
+        elif torch.backends.mps.is_available():
             if not torch.backends.mps.is_built():
                 print(
                     "MPS not available because the current PyTorch install was not built with MPS enabled."

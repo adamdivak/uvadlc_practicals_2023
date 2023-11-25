@@ -65,7 +65,7 @@ class VisualPromptCLIP(nn.Module):
         clip_model.to(args.device)
 
         # Hack to make model as float() (This is a CLIP hack)
-        if args.device == "cpu":
+        if args.device == "cpu" or args.device == "mps":
             clip_model = clip_model.float()
 
         prompts = [template.format(c.replace("_", " ")) for c in classnames]
