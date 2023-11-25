@@ -26,7 +26,7 @@ def parse_option():
     parser = argparse.ArgumentParser("Visual Prompting for CLIP")
 
     parser.add_argument("--print_freq", type=int, default=10, help="print frequency")
-    parser.add_argument("--save_freq", type=int, default=50, help="save frequency")
+    parser.add_argument("--save_freq", type=int, default=10, help="save frequency")
     parser.add_argument("--batch_size", type=int, default=128, help="batch_size")
     parser.add_argument(
         "--num_workers", type=int, default=16, help="num of workers to use"
@@ -123,6 +123,12 @@ def parse_option():
         "--resume", type=str, default=None, help="path to resume from checkpoint"
     )
     parser.add_argument(
+        "--resume_best",
+        default=False,
+        action="store_true",
+        help="resume best model from default checkpoint",
+    )
+    parser.add_argument(
         "--evaluate", default=False, action="store_true", help="evaluate model test set"
     )
     parser.add_argument("--gpu", type=int, default=None, help="gpu to use")
@@ -148,13 +154,17 @@ def parse_option():
         args.trial,
     )
 
+    # Added by me to easily resume from the best saved model for the given parameters to do additional evaluation
+    if args.resume_best:
+        args.resume = os.path.join(args.model_dir, "model_best.pth.tar")
+
     def get_device() -> str:
         """Returns the device for PyTorch to use."""
         device = "cpu"
         if torch.cuda.is_available():
             device = "cuda"
         # mac MPS support: https://pytorch.org/docs/stable/notes/mps.html
-        elif torch.backends.mps.is_available():
+        elif False and torch.backends.mps.is_available():  # FIXME
             if not torch.backends.mps.is_built():
                 print(
                     "MPS not available because the current PyTorch install was not built with MPS enabled."
@@ -182,7 +192,7 @@ def main():
     if args.evaluate:
         top1_test_acc = learn.evaluate("test")
     else:
-        # learn.run()
+        learn.run()
         top1_val_acc = learn.evaluate("valid")
         top1_test_acc = learn.evaluate("test")
 

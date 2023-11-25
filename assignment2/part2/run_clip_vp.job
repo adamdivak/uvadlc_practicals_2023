@@ -61,6 +61,7 @@ for dataset in "${datasets[@]}"; do
             --prompt_size $prompt_size \
             --root $root \
             --evaluate \
+            --resume_best \
             --test_noise
 
     done

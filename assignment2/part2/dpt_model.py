@@ -89,7 +89,7 @@ class DeepPromptCLIP(nn.Module):
         # will (I hope..) make broadcasting to expand it later as needed
         self.deep_prompt = torch.nn.Parameter(torch.zeros(50, 1, 768))
         self.deep_prompt.data = self.deep_prompt.data.half().to(
-            self.device
+            args.device
         )  # hard-coded fp16
 
         #######################

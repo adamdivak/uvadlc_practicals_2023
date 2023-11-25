@@ -57,6 +57,7 @@ for dataset in "${datasets[@]}"; do
             --injection_layer $injection_layer \
             --root $root \
             --evaluate \
+            --resume_best \
             --test_noise
     done
 done
