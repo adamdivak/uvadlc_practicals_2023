@@ -20,10 +20,18 @@ source activate dl2023
 root=/scratch-local/$USER
 mkdir -p $root
 
-# Without augmentation
+# No augmentation, no noise
 code_dir=./
 python $code_dir/train.py
 
-# With augmentation
+# With augmentation, no noise
 code_dir=./
 python $code_dir/train.py --augmentation_name auto_augment
+
+# No augmentation, with noise
+code_dir=./
+python $code_dir/train.py --test_noise
+
+# With augmentation, with noise
+code_dir=./
+python $code_dir/train.py --augmentation_name auto_augment --test_noise

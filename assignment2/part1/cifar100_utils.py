@@ -39,7 +39,10 @@ class AddGaussianNoise(torch.nn.Module):
         # - Then, you can transform z s.t. it is sampled from N(self.mean, self.std)
         # - Finally, you can add the noise to the image.
 
-        raise NotImplementedError
+        noise = torch.randn(img.shape, dtype=img.dtype)
+        noise = noise * self.std + self.mean
+        img += noise
+        return img
         #######################
         # END OF YOUR CODE    #
         #######################
@@ -60,6 +63,12 @@ def add_augmentation(augmentation_name, transform_list):
     if augmentation_name == "auto_augment":
         # Create a new transformation based on the augmentation_name.
         transform = transforms.AutoAugment(transforms.AutoAugmentPolicy.CIFAR10)
+
+        # Add the new transformation to the list.
+        transform_list.append(transform)
+    elif augmentation_name == "test_noise":
+        # Create a new transformation based on the augmentation_name.
+        transform = AddGaussianNoise()
 
         # Add the new transformation to the list.
         transform_list.append(transform)

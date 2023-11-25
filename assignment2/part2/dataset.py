@@ -24,7 +24,7 @@ DATASET = {"cifar10": CIFAR10, "cifar100": CIFAR100}
 
 
 class AddGaussianNoise(torch.nn.Module):
-    def __init__(self, mean=0., std=0.1):
+    def __init__(self, mean=0.0, std=0.1):
         self.mean = mean
         self.std = std
 
@@ -40,13 +40,18 @@ class AddGaussianNoise(torch.nn.Module):
         # - Then, you can transform z s.t. it is sampled from N(self.mean, self.std)
         # - Finally, you can add the noise to the image.
 
-        raise NotImplementedError
+        noise = torch.randn(img.shape, dtype=img.dtype)
+        noise = noise * self.std + self.mean
+        img += noise
+        return img
         #######################
         # END OF YOUR CODE    #
         #######################
 
     def __repr__(self):
-        return self.__class__.__name__ + '(mean={0}, std={1})'.format(self.mean, self.std)
+        return self.__class__.__name__ + "(mean={0}, std={1})".format(
+            self.mean, self.std
+        )
 
 
 def load_dataset(args, preprocess):
