@@ -42,7 +42,7 @@ class DeepPromptCLIP(nn.Module):
         clip_model.to(args.device)
 
         # hack to make model as float() (This is a CLIP hack)
-        if args.device == "cpu":
+        if args.device == "cpu" or args.device == "mps":
             clip_model = clip_model.float()
 
         prompts = [template.format(c.replace("_", " ")) for c in classnames]
@@ -88,6 +88,9 @@ class DeepPromptCLIP(nn.Module):
         # The second axis is for the batch. We don't know the batch size here, but setting it to one
         # will (I hope..) make broadcasting to expand it later as needed
         self.deep_prompt = torch.nn.Parameter(torch.zeros(50, 1, 768))
+        self.deep_prompt.data = self.deep_prompt.data.half().to(
+            self.device
+        )  # hard-coded fp16
 
         #######################
         # END OF YOUR CODE    #
