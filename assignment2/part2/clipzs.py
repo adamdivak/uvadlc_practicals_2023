@@ -29,6 +29,8 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 import torch.nn as nn
 from utils import AverageMeter, set_seed
+import re
+import json
 
 
 DATASET = {"cifar10": CIFAR10, "cifar100": CIFAR100}
@@ -170,9 +172,14 @@ class ZeroshotCLIP(nn.Module):
         # - Read the CLIP API documentation for more details:
         #   https://github.com/openai/CLIP#api
 
-        # remove this line once you implement the function
-        raise NotImplementedError("Implement the precompute_text_features function.")
-
+        with torch.no_grad():
+            tokenized_prompts = torch.cat([clip.tokenize(p) for p in prompts]).to(
+                device
+            )
+            text_features = clip_model.encode_text(tokenized_prompts)
+            text_features /= text_features.norm(dim=-1, keepdim=True)
+            print(text_features.shape)
+            return text_features
         #######################
         # END OF YOUR CODE    #
         #######################
@@ -209,8 +216,13 @@ class ZeroshotCLIP(nn.Module):
         # - Read the CLIP API documentation for more details:
         #   https://github.com/openai/CLIP#api
 
-        # remove this line once you implement the function
-        raise NotImplementedError("Implement the model_inference function.")
+        with torch.no_grad():
+            image_features = self.clip_model.encode_image(images)
+            image_features /= image_features.norm(dim=-1, keepdim=True)
+            similarity = (
+                self.clip_model.logit_scale * image_features @ self.text_features.T
+            )
+            return similarity
 
         #######################
         # END OF YOUR CODE    #
@@ -345,7 +357,12 @@ def main():
         logits = clipzs.model_inference(images)
 
         c_names = ",".join(args.class_names) if args.class_names else "default"
-        fig_file = f"{args.dataset}-{args.split}_{c_names}.png"
+        prompt = (
+            re.sub("[^a-zA-Z_]", "", args.prompt_template.replace(" ", "_"))
+            if args.prompt_template
+            else "default"
+        )
+        fig_file = f"{args.dataset}-{args.split}_{c_names}_{prompt}.png"
         visualize_predictions(images, logits, clipzs.class_names, fig_file)
 
     if args.class_names is not None:
@@ -366,13 +383,23 @@ def main():
     # - For each image in the batch, get the predicted class
     # - Update the accuracy meter
 
+    for batch_idx, (data, label) in (
+        batch_pbar := tqdm(
+            enumerate(loader),
+            total=len(loader),
+            leave=False,
+        )
+    ):
+        data.to(device)
+        logits = clipzs.model_inference(data)
+        top1_preds = logits.detach().argmax(dim=-1)
+        accuracy = (top1_preds == label).sum() / label.shape[0]
+        top1.update(accuracy)
+
     # Hints:
     # - Before filling this part, you should first complete the ZeroShotCLIP class
     # - Updating the accuracy meter is as simple as calling top1.update(accuracy, batch_size)
     # - You can use the model_inference method of the ZeroshotCLIP class to get the logits
-
-    # you can remove the following line once you have implemented the inference loop
-    raise NotImplementedError("Implement the inference loop")
 
     #######################
     # END OF YOUR CODE    #
@@ -381,6 +408,15 @@ def main():
     print(
         f"Zero-shot CLIP top-1 accuracy on {args.dataset}/{args.split}: {top1.avg*100}"
     )
+
+    os.makedirs("results", exist_ok=True)
+    with open(f"results/{args.dataset}_{args.split}.json", "w") as f:
+        result = {
+            "dataset": args.dataset,
+            "set": args.split,
+            "accuracy": top1.avg * 100,
+        }
+        json.dump(result, f)
 
 
 if __name__ == "__main__":
