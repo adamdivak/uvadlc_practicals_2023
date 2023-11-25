@@ -409,8 +409,9 @@ def main():
         f"Zero-shot CLIP top-1 accuracy on {args.dataset}/{args.split}: {top1.avg*100}"
     )
 
-    os.makedirs("results", exist_ok=True)
-    with open(f"results/{args.dataset}_{args.split}.json", "w") as f:
+    results_dir = "results_zs"
+    os.makedirs(results_dir, exist_ok=True)
+    with open(f"{results_dir}/{args.dataset}_{args.method}_.json", "w") as f:
         result = {
             "dataset": args.dataset,
             "set": args.split,
