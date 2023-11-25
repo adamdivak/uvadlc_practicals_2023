@@ -32,6 +32,7 @@ def load_clip_to_cpu(cfg):
 
 class DeepPromptCLIP(nn.Module):
     """Modified CLIP module to support prompting."""
+
     def __init__(self, args, dataset, template="This is a photo of {}"):
         super(DeepPromptCLIP, self).__init__()
         classnames = dataset.classes
@@ -44,14 +45,12 @@ class DeepPromptCLIP(nn.Module):
         if args.device == "cpu":
             clip_model = clip_model.float()
 
-
         prompts = [template.format(c.replace("_", " ")) for c in classnames]
         print("List of prompts:")
         pprint(prompts)
 
         prompts = torch.cat([clip.tokenize(p) for p in prompts])
         prompts = prompts.to(args.device)
-
 
         #######################
         # PUT YOUR CODE HERE  #
@@ -82,9 +81,9 @@ class DeepPromptCLIP(nn.Module):
         #######################
 
         # TODO: Initialize the learnable deep prompt.
-        # Hint: consider the shape required for the deep prompt to be compatible with the CLIP model 
+        # Hint: consider the shape required for the deep prompt to be compatible with the CLIP model
 
-        self.deep_prompt = 
+        # self.deep_prompt =
 
         # remove this line once you implement the function
         raise NotImplementedError("Write the code to compute text features.")
@@ -92,7 +91,6 @@ class DeepPromptCLIP(nn.Module):
         #######################
         # END OF YOUR CODE    #
         #######################
-
 
     def forward(self, image):
         """Forward pass of the model."""
@@ -123,11 +121,20 @@ class DeepPromptCLIP(nn.Module):
 
         x = x.type(self.clip_model.dtype)
         image_encoder = self.clip_model.visual
-        
+
         x = image_encoder.conv1(x)  # shape = [*, width, grid, grid]
         x = x.reshape(x.shape[0], x.shape[1], -1)  # shape = [*, width, grid ** 2]
         x = x.permute(0, 2, 1)  # shape = [*, grid ** 2, width]
-        x = torch.cat([image_encoder.class_embedding.to(x.dtype) + torch.zeros(x.shape[0], 1, x.shape[-1], dtype=x.dtype, device=x.device), x], dim=1)  # shape = [*, grid ** 2 + 1, width]
+        x = torch.cat(
+            [
+                image_encoder.class_embedding.to(x.dtype)
+                + torch.zeros(
+                    x.shape[0], 1, x.shape[-1], dtype=x.dtype, device=x.device
+                ),
+                x,
+            ],
+            dim=1,
+        )  # shape = [*, grid ** 2 + 1, width]
         x = x + image_encoder.positional_embedding.to(x.dtype)
         x = image_encoder.ln_pre(x)
 

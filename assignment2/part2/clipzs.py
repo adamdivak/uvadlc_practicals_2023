@@ -189,7 +189,7 @@ class ZeroshotCLIP(nn.Module):
         Performs inference on a batch of images.
 
         Args:
-            image (torch.Tensor): image tensor of shape (batch_size, 3, 224, 224)
+            images (torch.Tensor): image tensor of shape (batch_size, 3, 224, 224)
 
         Returns:
             logits (torch.Tensor): logits of shape (batch_size, num_classes,)
@@ -390,7 +390,7 @@ def main():
             leave=False,
         )
     ):
-        data.to(device)
+        data = data.to(device)
         logits = clipzs.model_inference(data)
         top1_preds = logits.detach().argmax(dim=-1)
         accuracy = (top1_preds == label).sum() / label.shape[0]

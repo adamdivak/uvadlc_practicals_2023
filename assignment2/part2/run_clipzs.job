@@ -20,6 +20,8 @@ source activate dl2023
 root=/scratch-local/$USER
 mkdir -p $root
 
+code_dir=./
+
 # CIFAR10
 echo "CIFAR10 on train set:"
 python3 $code_dir/clipzs.py --dataset cifar10 --split train --root $root
