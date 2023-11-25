@@ -50,5 +50,18 @@ for dataset in "${datasets[@]}"; do
             --prompt_size $prompt_size \
             --root $root \
             --visualize_prompt
+
+        echo "Evaluating experiment on $dataset with $method and prompt size $prompt_size with test noise"
+        python $code_dir/main.py \
+            --dataset $dataset \
+            --arch $arch \
+            --text_prompt_template "$text_prompt_template" \
+            --epochs $epochs \
+            --method $method \
+            --prompt_size $prompt_size \
+            --root $root \
+            --evaluate \
+            --test_noise
+
     done
 done

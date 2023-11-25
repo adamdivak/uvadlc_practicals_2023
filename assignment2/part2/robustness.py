@@ -20,6 +20,8 @@ import argparse
 import torch
 from learner import Learner
 
+# Honestly I don't understand why we have this file and what the difference is compared to main.py
+
 
 def parse_option():
     parser = argparse.ArgumentParser("Visual Prompting for CLIP")
@@ -52,8 +54,18 @@ def parse_option():
     # model
     parser.add_argument("--model", type=str, default="clip")
     parser.add_argument("--arch", type=str, default="ViT-B/32")
-    parser.add_argument("--prompt_type", type=str, choices=["visual_prompt", "deep_prompt"], default="visual_prompt")
-    parser.add_argument("--injection_layer", type=int, default=0, help="id of transformer layer to inject prompt into")
+    parser.add_argument(
+        "--prompt_type",
+        type=str,
+        choices=["visual_prompt", "deep_prompt"],
+        default="visual_prompt",
+    )
+    parser.add_argument(
+        "--injection_layer",
+        type=int,
+        default=0,
+        help="id of transformer layer to inject prompt into",
+    )
     parser.add_argument(
         "--method",
         type=str,
@@ -66,7 +78,7 @@ def parse_option():
         help="choose visual prompting method",
     )
     parser.add_argument(
-        "--prompt_size", type=int, default=0, help="size for visual prompts"
+        "--prompt_size", type=int, default=30, help="size for visual prompts"
     )
     parser.add_argument(
         "--text_prompt_template",
@@ -139,7 +151,6 @@ def parse_option():
 
 
 def main():
-
     args = parse_option()
     print(args)
     learn = Learner(args)

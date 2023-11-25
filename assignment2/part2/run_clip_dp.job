@@ -7,7 +7,7 @@
 #SBATCH --cpus-per-task=3
 #SBATCH --time=04:00:00
 #SBATCH --mem=32000M
-#SBATCH --output=clip_vp_output_%A.out
+#SBATCH --output=clip_dp_output_%A.out
 #SBATCH --error=clip_dp_error_%A.out
 
 module purge
@@ -46,5 +46,17 @@ for dataset in "${datasets[@]}"; do
             --prompt_type deep_prompt \
             --injection_layer $injection_layer \
             --root $root
+
+        echo "Evaluating experiment on $dataset injecting deep prompt into layer $injection_layer with test noise"
+        python $code_dir/main.py \
+            --dataset $dataset \
+            --arch $arch \
+            --text_prompt_template "$text_prompt_template" \
+            --epochs $epochs \
+            --prompt_type deep_prompt \
+            --injection_layer $injection_layer \
+            --root $root \
+            --evaluate \
+            --test_noise
     done
 done
