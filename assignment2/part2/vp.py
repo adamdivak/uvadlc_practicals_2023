@@ -127,7 +127,7 @@ class PadPrompter(nn.Module):
         x[:, :, : self.pad_size, :] += self.pad_up
         x[:, :, -self.pad_size :, :] += self.pad_down
         x[:, :, :, : self.pad_size] += self.pad_left
-        x[:, :, :, -self.pad_size :] += self.pad_left
+        x[:, :, :, -self.pad_size :] += self.pad_right
 
         return x
         #######################
