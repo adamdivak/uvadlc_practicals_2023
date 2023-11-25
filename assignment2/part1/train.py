@@ -15,6 +15,8 @@
 ################################################################################
 
 import argparse
+import os
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -348,6 +350,7 @@ def main(lr, batch_size, epochs, data_dir, seed, augmentation_name, test_noise):
     print(f"Test accuracy of best model: {test_accuracy}")
 
     results_dir = "results_resnet18"
+    os.makedirs(results_dir, exist_ok=True)
     fn = f"resnet_{augmentation_name}_{test_noise}.json"
     result = {
         "augmentation_name": augmentation_name,
