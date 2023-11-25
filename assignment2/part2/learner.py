@@ -29,7 +29,14 @@ import time
 from tqdm import tqdm
 from vpt_model import VisualPromptCLIP
 from dpt_model import DeepPromptCLIP
-from utils import cosine_lr, AverageMeter, ProgressMeter, accuracy, save_checkpoint, set_seed
+from utils import (
+    cosine_lr,
+    AverageMeter,
+    ProgressMeter,
+    accuracy,
+    save_checkpoint,
+    set_seed,
+)
 from dataset import load_dataset, construct_dataloader
 
 
@@ -55,9 +62,13 @@ class Learner:
 
         print("Building custom CLIP")
         if args.prompt_type == "visual_prompt":
-            self.clip = VisualPromptCLIP(args, self.test_dataset, template=PROMPT_TEMPLATE)
+            self.clip = VisualPromptCLIP(
+                args, self.test_dataset, template=PROMPT_TEMPLATE
+            )
         elif args.prompt_type == "deep_prompt":
-            self.clip = DeepPromptCLIP(args, self.test_dataset, template=PROMPT_TEMPLATE)
+            self.clip = DeepPromptCLIP(
+                args, self.test_dataset, template=PROMPT_TEMPLATE
+            )
         else:
             raise NotImplementedError(f"{args.prompt_type} is not supported :)!")
 
@@ -72,8 +83,20 @@ class Learner:
         # TODO: Turn off gradients in both the image and the text encoder
         # Note: You need to keep the visual/deep prompt's parameters trainable
         # Hint: Check for "prompt_learner" and "deep_prompt" in the parameters' names
+        self.clip.requires_grad_(False)
+        if hasattr(self.clip, "prompt_learner"):
+            self.clip.prompt_learner.requires_grad_(True)
+        else:
+            print(
+                f"prompt_learner not found among the layers, not enabling gradients for it"
+            )
 
-        raise NotImplementedError
+        if hasattr(self.clip, "deep_prompt"):
+            self.clip.deep_prompt.requires_grad_(True)
+        else:
+            print(
+                f"deep_prompt not found among the layers, not enabling gradients for it"
+            )
         #######################
         # END OF YOUR CODE    #
         #######################
@@ -145,7 +168,6 @@ class Learner:
         epochs_since_improvement = 0
 
         for epoch in range(self.args.epochs):
-
             # Train for one epoch
             self.train_one_epoch(epoch)
 
@@ -159,7 +181,9 @@ class Learner:
             save_checkpoint(
                 {
                     "epoch": epoch + 1,
-                    "state_dict": self.clip.prompt_learner.state_dict() if self.args.prompt_type == "visual_prompt" else self.clip.state_dict(),
+                    "state_dict": self.clip.prompt_learner.state_dict()
+                    if self.args.prompt_type == "visual_prompt"
+                    else self.clip.state_dict(),
                     "best_acc1": self.best_acc1,
                     "optimizer": self.optimizer.state_dict(),
                 },
@@ -204,7 +228,6 @@ class Learner:
 
         end = time.time()
         for i, (images, target) in enumerate(tqdm(self.train_loader)):
-
             # Measure data loading time
             data_time.update(time.time() - end)
 
@@ -226,7 +249,14 @@ class Learner:
             # - Perform a backward pass
             # - Update the parameters
 
-            raise NotImplementedError
+            with torch.autograd.set_detect_anomaly(True):
+                self.optimizer.zero_grad()
+                images, target = images.to(self.device), target.to(self.device)
+                output = self.clip(images)
+                loss = self.criterion(output, target)
+                loss.backward()
+                self.optimizer.step()
+
             #######################
             # END OF YOUR CODE    #
             #######################
@@ -252,7 +282,9 @@ class Learner:
                 save_checkpoint(
                     {
                         "epoch": epoch + 1,
-                        "state_dict": self.clip.prompt_learner.state_dict() if self.args.prompt_type == "visual_prompt" else self.clip.state_dict(),
+                        "state_dict": self.clip.prompt_learner.state_dict()
+                        if self.args.prompt_type == "visual_prompt"
+                        else self.clip.state_dict(),
                         "best_acc1": self.best_acc1,
                         "optimizer": self.optimizer.state_dict(),
                     },
@@ -279,7 +311,6 @@ class Learner:
         with torch.no_grad():
             end = time.time()
             for i, (images, target) in enumerate(tqdm(loader)):
-
                 #######################
                 # PUT YOUR CODE HERE  #
                 #######################
@@ -291,7 +322,9 @@ class Learner:
                 # - Forward pass (using self.clip)
                 # - Compute the loss (using self.criterion)
 
-                raise NotImplementedError
+                images, target = images.to(self.device), target.to(self.device)
+                output = self.clip.forward(images)
+                loss = self.criterion(output, target)
                 #######################
                 # END OF YOUR CODE    #
                 #######################

@@ -55,6 +55,7 @@ def load_clip_to_cpu(cfg):
 
 class VisualPromptCLIP(nn.Module):
     """Modified CLIP module to support prompting."""
+
     def __init__(self, args, dataset, template="This is a photo of {}"):
         super(VisualPromptCLIP, self).__init__()
         classnames = dataset.classes
@@ -81,9 +82,12 @@ class VisualPromptCLIP(nn.Module):
         # Instructions:
         # - Given a list of prompts, compute the text features for each prompt.
         # - Return a tensor of shape (num_prompts, 512).
-
-        # remove this line once you implement the function
-        raise NotImplementedError("Write the code to compute text features.")
+        with torch.no_grad():
+            tokenized_prompts = torch.cat([clip.tokenize(p) for p in prompts]).to(
+                args.device
+            )
+            text_features = clip_model.encode_text(tokenized_prompts)
+            text_features /= text_features.norm(dim=-1, keepdim=True)
 
         #######################
         # END OF YOUR CODE    #
@@ -99,7 +103,7 @@ class VisualPromptCLIP(nn.Module):
         if args.visualize_prompt:
             self.visualize_prompt(args.method)
 
-    def forward(self, image):
+    def forward(self, images):
         """Forward pass of the model."""
 
         #######################
@@ -117,8 +121,13 @@ class VisualPromptCLIP(nn.Module):
         # - You need to multiply the similarity logits with the logit scale (clip_model.logit_scale).
         # - Return logits of shape (batch size, number of classes).
 
-        # remove this line once you implement the function
-        raise NotImplementedError("Implement the model_inference function.")
+        images = self.prompt_learner(images)
+        image_features = self.clip_model.encode_image(images)
+        # do NOT use image_features /= image_features.norm(dim=-1, keepdim=True) here, as the inplace operation
+        # will break gradient calculation
+        image_features = image_features / image_features.norm(dim=-1, keepdim=True)
+        similarity = self.clip_model.logit_scale * image_features @ self.text_features.T
+        return similarity
 
         #######################
         # END OF YOUR CODE    #

@@ -7,7 +7,8 @@
 #SBATCH --cpus-per-task=3
 #SBATCH --time=04:00:00
 #SBATCH --mem=32000M
-#SBATCH --output=slurm_output_%A.out
+#SBATCH --output=resnet18_output_%A.out
+#SBATCH --error=resnet18_error_%A.out
 
 module purge
 module load 2022

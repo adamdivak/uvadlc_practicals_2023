@@ -23,8 +23,9 @@ import numpy as np
 class FixedPatchPrompter(nn.Module):
     """
     Defines visual-prompt as a fixed patch over an image.
-    For refernece, this prompt should look like Fig 2(a) in the PDF.
+    For reference, this prompt should look like Fig 2(a) in the PDF.
     """
+
     def __init__(self, args):
         super(FixedPatchPrompter, self).__init__()
 
@@ -44,8 +45,12 @@ class FixedPatchPrompter(nn.Module):
         #     (3 for the RGB channels)
         # - You can define variable parameters using torch.nn.Parameter
         # - You can initialize the patch randomly in N(0, 1) using torch.randn
+        self.prompt_size = args.prompt_size
 
-        raise NotImplementedError
+        self.pad = torch.nn.Parameter(
+            torch.randn(1, 3, self.prompt_size, self.prompt_size)
+        )
+
         #######################
         # END OF YOUR CODE    #
         #######################
@@ -61,20 +66,24 @@ class FixedPatchPrompter(nn.Module):
         # - It is always advisable to implement and then visualize if
         #   your prompter does what you expect it to do.
 
-        raise NotImplementedError
+        x[:, :, : self.prompt_size, : self.prompt_size] += self.pad
+
+        return x
         #######################
         # END OF YOUR CODE    #
         #######################
 
+
 class PadPrompter(nn.Module):
     """
     Defines visual-prompt as a parametric padding over an image.
-    For refernece, this prompt should look like Fig 2(c) in the PDF.
+    For reference, this prompt should look like Fig 2(c) in the PDF.
     """
+
     def __init__(self, args):
         super(PadPrompter, self).__init__()
-        pad_size = args.prompt_size
-        image_size = args.image_size
+        self.pad_size = args.prompt_size
+        self.image_size = args.image_size
 
         #######################
         # PUT YOUR CODE HERE  #
@@ -88,7 +97,18 @@ class PadPrompter(nn.Module):
         # - Shape of self.pad_up and self.pad_down should be (1, 3, pad_size, image_size)
         # - See Fig 2.(g)/(h) and think about the shape of self.pad_left and self.pad_right
 
-        raise NotImplementedError
+        self.pad_up = torch.nn.Parameter(
+            torch.randn(1, 3, self.pad_size, self.image_size)
+        )
+        self.pad_down = torch.nn.Parameter(
+            torch.randn(1, 3, self.pad_size, self.image_size)
+        )
+        self.pad_left = torch.nn.Parameter(
+            torch.randn(1, 3, self.image_size, self.pad_size)
+        )
+        self.pad_right = torch.nn.Parameter(
+            torch.randn(1, 3, self.image_size, self.pad_size)
+        )
         #######################
         # END OF YOUR CODE    #
         #######################
@@ -104,7 +124,12 @@ class PadPrompter(nn.Module):
         # - It is always advisable to implement and then visualize if
         #   your prompter does what you expect it to do.
 
-        raise NotImplementedError
+        x[:, :, : self.pad_size, :] += self.pad_up
+        x[:, :, -self.pad_size :, :] += self.pad_down
+        x[:, :, :, : self.pad_size] += self.pad_left
+        x[:, :, :, -self.pad_size :] += self.pad_left
+
+        return x
         #######################
         # END OF YOUR CODE    #
         #######################

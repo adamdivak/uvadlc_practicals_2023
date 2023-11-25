@@ -19,6 +19,7 @@ import os
 import argparse
 import torch
 from learner import Learner
+import json
 
 
 def parse_option():
@@ -52,9 +53,24 @@ def parse_option():
     # model
     parser.add_argument("--model", type=str, default="clip")
     parser.add_argument("--arch", type=str, default="ViT-B/32")
-    parser.add_argument("--prompt_type", type=str, choices=["visual_prompt", "deep_prompt"], default="visual_prompt")
-    parser.add_argument("--prompt_num", type=int, default=4, help="number of learnable deep prompts to use")
-    parser.add_argument("--injection_layer", type=int, default=0, help="id of transformer layer to inject prompt into")
+    parser.add_argument(
+        "--prompt_type",
+        type=str,
+        choices=["visual_prompt", "deep_prompt"],
+        default="visual_prompt",
+    )
+    parser.add_argument(
+        "--prompt_num",
+        type=int,
+        default=4,
+        help="number of learnable deep prompts to use",
+    )
+    parser.add_argument(
+        "--injection_layer",
+        type=int,
+        default=0,
+        help="id of transformer layer to inject prompt into",
+    )
     parser.add_argument(
         "--method",
         type=str,
@@ -70,7 +86,9 @@ def parse_option():
         "--prompt_size", type=int, default=30, help="size for visual prompts"
     )
     parser.add_argument(
-        "--text_prompt_template", type=str, default="This is a photo of a {}",
+        "--text_prompt_template",
+        type=str,
+        default="This is a photo of a {}",
     )
     parser.add_argument(
         "--visualize_prompt",
@@ -83,7 +101,9 @@ def parse_option():
     parser.add_argument("--dataset", type=str, default="cifar100", help="dataset")
     parser.add_argument("--image_size", type=int, default=224, help="image size")
     parser.add_argument(
-        "--test_noise", default=False, action="store_true",
+        "--test_noise",
+        default=False,
+        action="store_true",
         help="whether to add noise to the test images",
     )
 
@@ -128,7 +148,23 @@ def parse_option():
         args.trial,
     )
 
-    args.device = "cuda" if torch.cuda.is_available() else "cpu"
+    def get_device() -> str:
+        """Returns the device for PyTorch to use."""
+        device = "cpu"
+        if torch.cuda.is_available():
+            device = "cuda"
+        # mac MPS support: https://pytorch.org/docs/stable/notes/mps.html
+        # FIXME does not work for some reason :( error: 'mps.select' op failed to verify that all of {true_value, false_value, result} have same element type
+        elif False and torch.backends.mps.is_available():
+            if not torch.backends.mps.is_built():
+                print(
+                    "MPS not available because the current PyTorch install was not built with MPS enabled."
+                )
+            else:
+                device = "mps"
+        return device
+
+    args.device = get_device()
     args.model_folder = os.path.join(args.model_dir, args.filename)
     if not os.path.isdir(args.model_folder):
         os.makedirs(args.model_folder)
@@ -141,12 +177,22 @@ def main():
     print(args)
     learn = Learner(args)
 
+    results_dir = "results_vp"
+    os.makedirs(results_dir, exist_ok=True)
+    top1_val_acc, top1_test_acc = None, None
     if args.evaluate:
-        learn.evaluate("test")
+        top1_test_acc = learn.evaluate("test")
     else:
-        learn.run()
-        learn.evaluate("valid")
-        learn.evaluate("test")
+        # learn.run()
+        top1_val_acc = learn.evaluate("valid")
+        top1_test_acc = learn.evaluate("test")
+
+    result = vars(args)
+    result["top1_val_acc"] = top1_val_acc
+    result["top1_test_acc"] = top1_test_acc
+    fn = f"{args.dataset}_{args.prompt_type}_{args.method}_{args.prompt_num}_{args.injection_layer}_{args.prompt_size}_{args.test_noise}.json"
+    with open(f"{results_dir}/{fn}", "w") as f:
+        json.dump(result, f)
 
 
 if __name__ == "__main__":
