@@ -178,7 +178,6 @@ class ZeroshotCLIP(nn.Module):
             )
             text_features = clip_model.encode_text(tokenized_prompts)
             text_features /= text_features.norm(dim=-1, keepdim=True)
-            print(text_features.shape)
             return text_features
         #######################
         # END OF YOUR CODE    #
@@ -411,11 +410,11 @@ def main():
 
     results_dir = "results_zs"
     os.makedirs(results_dir, exist_ok=True)
-    with open(f"{results_dir}/{args.dataset}_{args.method}_.json", "w") as f:
+    with open(f"{results_dir}/{args.dataset}_{args.split}_.json", "w") as f:
         result = {
             "dataset": args.dataset,
             "set": args.split,
-            "accuracy": top1.avg * 100,
+            "accuracy": top1.avg.item() * 100,
         }
         json.dump(result, f)
 

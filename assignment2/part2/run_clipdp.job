@@ -23,32 +23,29 @@ code_dir=./
 # Standard constants
 arch="ViT-B/32"
 text_prompt_template="This is a photo of a {}"
-epochs=20
+epochs=3 # FIXME for testing
 
 ## Set of experiments on CIFAR-10
 dataset="cifar10"
 root=/scratch-local/$USER
 mkdir -p $root
 
-# visual prompting
+# deep prompting
 
 datasets=(cifar10 cifar100)
-methods=(fixed_patch padding)
-prompt_sizes=(1 1)
+injection_layers=(0 1 2 3 4 5 6 7)
 
 for dataset in "${datasets[@]}"; do
-    for i in "${!methods[@]}"; do
-        method=${methods[$i]}
-        prompt_size=${prompt_sizes[$i]}
-        echo "Running experiment on $dataset with $method and prompt size $prompt_size"
+    for injection_layer in "${injection_layers[@]}"; do
+        echo "Running experiment on $dataset injecting deep prompt into layer $injection_layer"
         python $code_dir/main.py \
             --dataset $dataset \
             --arch $arch \
             --text_prompt_template "$text_prompt_template" \
             --epochs $epochs \
             --method $method \
-            --prompt_size $prompt_size \
-            --root $root \
-            --visualize_prompt
+            --prompt_type deep_prompt \
+            --injection_layer $injection_layer \
+            --root $root
     done
 done
