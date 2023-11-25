@@ -191,7 +191,7 @@ class ZeroshotCLIP(nn.Module):
             images (torch.Tensor): image tensor of shape (batch_size, 3, 224, 224)
 
         Returns:
-            logits (torch.Tensor): logits of shape (batch_size, num_classes,)
+            logits (torch.Tensor): logits of shape (batch_size, num_classes)
         """
 
         #######################
@@ -208,7 +208,7 @@ class ZeroshotCLIP(nn.Module):
         # - Compute the image features (encodings) using the CLIP model.
         # - Normalize the image features.
         # - Compute similarity logits between the image features and the text features.
-        #   You need to multiply the similarity logits with the logit scale (clip_model.logit_scale).
+        #   You need to multiply the similarity logits with the logit scale (self.logit_scale).
         # - Return logits of shape (batch size, number of classes).
 
         # Hint:
