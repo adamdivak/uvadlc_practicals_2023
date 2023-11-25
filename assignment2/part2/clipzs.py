@@ -390,9 +390,9 @@ def main():
             leave=False,
         )
     ):
-        data = data.to(device)
+        data, label = data.to(device), label.to(device)
         logits = clipzs.model_inference(data)
-        top1_preds = logits.detach().argmax(dim=-1)
+        top1_preds = logits.argmax(dim=-1)
         accuracy = (top1_preds == label).sum() / label.shape[0]
         top1.update(accuracy)
 

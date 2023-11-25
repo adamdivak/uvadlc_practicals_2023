@@ -24,6 +24,7 @@ from torch.utils.tensorboard import SummaryWriter
 import torchvision.models as models
 import torchvision
 from tqdm import tqdm
+import json
 
 from cifar100_utils import get_train_validation_set, get_test_set
 
@@ -345,6 +346,16 @@ def main(lr, batch_size, epochs, data_dir, seed, augmentation_name, test_noise):
     )
     test_accuracy = evaluate_model(model, test_loader, device)
     print(f"Test accuracy of best model: {test_accuracy}")
+
+    results_dir = "results_resnet18"
+    fn = f"resnet_{augmentation_name}_{test_noise}.json"
+    result = {
+        "augmentation_name": augmentation_name,
+        "test_noise": test_noise,
+        "test_accuracy": test_accuracy,
+    }
+    with open(f"{results_dir}/{fn}", "w") as f:
+        json.dump(result, f)
 
     #######################
     # END OF YOUR CODE    #

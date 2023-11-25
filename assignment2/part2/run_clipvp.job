@@ -31,8 +31,8 @@ root=/scratch-local/$USER
 mkdir -p $root
 
 datasets=(cifar10 cifar100)
-methods=(fixed_patch random_padding)
-prompt_sizes=(1)
+methods=(fixed_patch padding)
+prompt_sizes=(1 1)
 
 for dataset in "${datasets[@]}"; do
     for i in "${!methods[@]}"; do
