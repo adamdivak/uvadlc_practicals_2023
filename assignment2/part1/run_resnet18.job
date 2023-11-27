@@ -20,18 +20,23 @@ source activate dl2023
 root=/scratch-local/$USER
 mkdir -p $root
 
-# No augmentation, no noise
 code_dir=./
-python $code_dir/train.py
 
-# With augmentation, no noise
-code_dir=./
-python $code_dir/train.py --augmentation_name auto_augment
+datasets=(cifar10 cifar100)
 
-# No augmentation, with noise
-code_dir=./
-python $code_dir/train.py --test_noise
+for dataset in "${datasets[@]}"; do
+  # It's not easy to "negate" the augmentation_name and test_noise options with the given cmd arguments,
+  # so enumerate the combinations instead of using for loops
 
-# With augmentation, with noise
-code_dir=./
-python $code_dir/train.py --augmentation_name auto_augment --test_noise
+  # No augmentation, no noise
+  python $code_dir/train.py --print_tqdm_interval 60 --dataset $dataset
+
+  # With augmentation, no noise
+  python $code_dir/train.py --print_tqdm_interval 60 --dataset $dataset --augmentation_name auto_augment
+
+  # No augmentation, with noise
+  python $code_dir/train.py --print_tqdm_interval 60 --dataset $dataset --test_noise
+
+  # With augmentation, with noise
+  python $code_dir/train.py --print_tqdm_interval 60 --dataset $dataset --augmentation_name auto_augment --test_noise
+done

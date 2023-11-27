@@ -23,9 +23,11 @@ from torchvision.transforms import v2 as transforms
 
 dataset_name = "cifar100"
 
+
 def set_dataset(dataset):
     global dataset_name
     dataset_name = dataset
+
 
 def get_dataset(dataset):
     if dataset == "cifar100":
@@ -34,6 +36,7 @@ def get_dataset(dataset):
         return CIFAR10
     else:
         raise ValueError("dataset should be either cifar100 or cifar10")
+
 
 class AddGaussianNoise(torch.nn.Module):
     def __init__(self, mean=0.0, std=0.1, always_apply=False):

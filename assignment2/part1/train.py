@@ -28,7 +28,12 @@ import torchvision
 from tqdm import tqdm
 import json
 
-from cifar100_utils import get_train_validation_set, get_test_set, set_dataset
+from cifar100_utils import (
+    get_train_validation_set,
+    get_test_set,
+    set_dataset,
+    dataset_name,
+)
 
 
 def set_seed(seed):
@@ -42,6 +47,22 @@ def set_seed(seed):
         torch.cuda.manual_seed_all(seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
+
+
+def get_device() -> str:
+    """Returns the device for PyTorch to use."""
+    device = "cpu"
+    if torch.cuda.is_available():
+        device = "cuda"
+    # mac MPS support: https://pytorch.org/docs/stable/notes/mps.html
+    elif torch.backends.mps.is_available():
+        if not torch.backends.mps.is_built():
+            print(
+                "MPS not available because the current PyTorch install was not built with MPS enabled."
+            )
+        else:
+            device = "mps"
+    return device
 
 
 def get_model(num_classes=100):
@@ -86,6 +107,7 @@ def train_model(
     checkpoint_name,
     device,
     augmentation_name=None,
+    print_tqdm_interval=0.1,
 ):
     """
     Trains a given model architecture for the specified hyperparameters.
@@ -134,8 +156,8 @@ def train_model(
     for epoch in (
         epoch_pbar := tqdm(
             range(1, epochs + 1),
-            mininterval=args.print_tqdm_interval,
-            maxinterval=args.print_tqdm_interval,
+            mininterval=print_tqdm_interval,
+            maxinterval=print_tqdm_interval,
         )
     ):
         epoch_pbar.set_description(f"Epoch: {epoch}")
@@ -195,13 +217,14 @@ def train_model(
                 epoch * len(train_loader) + batch_idx,
             )
 
-            batch_pbar.set_description(f"Train batch: {batch_idx:3}")
+            batch_pbar.set_description(f"Train batch: {batch_idx:3}", refresh=False)
             batch_pbar.set_postfix(
                 {
                     "Batch loss": f"{loss:.2f}",
                     "Running training loss": running_training_loss,
                     "Running training accuracy": running_training_accuracy,
-                }
+                },
+                refresh=False,
             )
 
         val_accuracy = evaluate_model(model, val_loader, device)
@@ -234,7 +257,8 @@ def train_model(
                 "Tr acc": f"{running_training_accuracy:.2f}",
                 # "val loss": f"{val_metrics['loss']:.2f}",
                 "val acc": f"{val_accuracy:.2f}",
-            }
+            },
+            refresh=False,
         )
 
         model.train()
@@ -314,7 +338,16 @@ def evaluate_model(model, data_loader, device):
     return accuracy
 
 
-def main(lr, batch_size, epochs, data_dir, seed, augmentation_name, test_noise):
+def main(
+    lr,
+    batch_size,
+    epochs,
+    data_dir,
+    seed,
+    augmentation_name,
+    test_noise,
+    print_tqdm_interval,
+):
     """
     Main function for training and testing the model.
 
@@ -333,21 +366,6 @@ def main(lr, batch_size, epochs, data_dir, seed, augmentation_name, test_noise):
     set_seed(seed)
 
     # Set the device to use for training
-    def get_device() -> str:
-        """Returns the device for PyTorch to use."""
-        device = "cpu"
-        if torch.cuda.is_available():
-            device = "cuda"
-        # mac MPS support: https://pytorch.org/docs/stable/notes/mps.html
-        elif torch.backends.mps.is_available():
-            if not torch.backends.mps.is_built():
-                print(
-                    "MPS not available because the current PyTorch install was not built with MPS enabled."
-                )
-            else:
-                device = "mps"
-        return device
-
     device = get_device()
 
     # Load the model
@@ -366,6 +384,7 @@ def main(lr, batch_size, epochs, data_dir, seed, augmentation_name, test_noise):
         checkpoint_name="restnet18_best_model.pt",
         device=device,
         augmentation_name=augmentation_name,
+        print_tqdm_interval=print_tqdm_interval,
     )
 
     # Evaluate the model on the test set
@@ -378,8 +397,9 @@ def main(lr, batch_size, epochs, data_dir, seed, augmentation_name, test_noise):
 
     results_dir = "results_resnet18"
     os.makedirs(results_dir, exist_ok=True)
-    fn = f"resnet_{augmentation_name}_{test_noise}.json"
+    fn = f"resnet_{dataset_name}_{augmentation_name}_{test_noise}.json"
     result = {
+        "dataset": dataset_name,
         "augmentation_name": augmentation_name,
         "test_noise": test_noise,
         "test_accuracy": test_accuracy,
@@ -402,6 +422,13 @@ if __name__ == "__main__":
     parser.add_argument("--epochs", default=30, type=int, help="Max number of epochs")
     parser.add_argument(
         "--seed", default=123, type=int, help="Seed to use for reproducing results"
+    )
+    # Adam: limit tqdm logging frequency
+    parser.add_argument(
+        "--print_tqdm_interval",
+        type=float,
+        default=1.0,
+        help="min and max interval to print tqdm progress bars to avoid polluting the Snellius log files too much",
     )
     parser.add_argument(
         "--data_dir",
