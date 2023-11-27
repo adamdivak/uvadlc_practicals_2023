@@ -211,6 +211,7 @@ def main():
     result = vars(args)
     result["top1_val_acc"] = top1_val_acc
     result["top1_test_acc"] = top1_test_acc
+    result["best_epoch"] = learn.best_epoch
     fn = f"{args.dataset}_{args.prompt_type}_{args.method}_{args.prompt_num}_{args.injection_layer}_{args.prompt_size}_{args.test_noise}.json"
     with open(f"{results_dir}/{fn}", "w") as f:
         json.dump(result, f)

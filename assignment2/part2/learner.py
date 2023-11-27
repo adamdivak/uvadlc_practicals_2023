@@ -47,6 +47,7 @@ class Learner:
         self.args = args
         self.device = args.device
         self.best_acc1 = 0
+        self.best_epoch = -1  # Adam: also save best epoch for evaluation later
 
         # Load clip image transformation
         _, preprocess = clip.load(args.arch)
@@ -158,6 +159,7 @@ class Learner:
                     self.args.resume, checkpoint["epoch"]
                 )
             )
+            self.best_epoch = checkpoint["epoch"]
         else:
             print("=> no checkpoint found at '{}'".format(self.args.resume))
 
@@ -188,6 +190,8 @@ class Learner:
             # Remember best acc@1 and save checkpoint
             is_best = acc1 > self.best_acc1
             self.best_acc1 = max(acc1, self.best_acc1)
+            if is_best:
+                self.best_epoch = epoch + 1
 
             save_checkpoint(
                 {
