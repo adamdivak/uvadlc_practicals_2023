@@ -36,7 +36,7 @@ datasets=(cifar10 cifar100)
 methods=(fixed_patch padding)
 prompt_sizes=(1 1)
 
-default_parameters="--root $root --arch $arch --epochs $epochs --text_prompt_template $text_prompt_template --print_tqdm_interval 60"
+default_parameters="--root $root --arch $arch --epochs $epochs --print_tqdm_interval 60"
 
 for dataset in "${datasets[@]}"; do
     for i in "${!methods[@]}"; do
@@ -44,7 +44,8 @@ for dataset in "${datasets[@]}"; do
         prompt_size=${prompt_sizes[$i]}
         echo "Running experiment on $dataset with $method and prompt size $prompt_size"
         python $code_dir/main.py \
-            "$default_parameters" \
+            $default_parameters \
+            --text_prompt_template "$text_prompt_template" \
             --dataset $dataset \
             --method $method \
             --prompt_size $prompt_size \
@@ -52,7 +53,8 @@ for dataset in "${datasets[@]}"; do
 
         echo "Evaluating experiment on $dataset with $method and prompt size $prompt_size with test noise"
         python $code_dir/main.py \
-            "$default_parameters" \
+            $default_parameters \
+            --text_prompt_template "$text_prompt_template" \
             --dataset $dataset \
             --method $method \
             --prompt_size $prompt_size \
