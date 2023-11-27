@@ -131,7 +131,13 @@ def train_model(
     best_model_in_epoch = -1
 
     total_step = len(train_loader)
-    for epoch in (epoch_pbar := tqdm(range(1, epochs + 1))):
+    for epoch in (
+        epoch_pbar := tqdm(
+            range(1, epochs + 1),
+            mininterval=args.print_tqdm_interval,
+            maxinterval=args.print_tqdm_interval,
+        )
+    ):
         epoch_pbar.set_description(f"Epoch: {epoch}")
 
         running_loss = 0.0
@@ -144,6 +150,8 @@ def train_model(
                 enumerate(train_loader),
                 total=total_step,
                 leave=False,
+                mininterval=args.print_tqdm_interval,
+                maxinterval=args.print_tqdm_interval,
             )
         ):
             data_, target_ = data_.to(device), target_.to(device)
@@ -278,7 +286,11 @@ def evaluate_model(model, data_loader, device):
     with torch.no_grad():
         for batch_idx, (data_t, target_t) in (
             batch_pbar := tqdm(
-                enumerate(data_loader), total=len(data_loader), leave=False
+                enumerate(data_loader),
+                total=len(data_loader),
+                leave=False,
+                mininterval=args.print_tqdm_interval,
+                maxinterval=args.print_tqdm_interval,
             )
         ):
             data_t, target_t = data_t.to(device), target_t.to(device)
@@ -416,5 +428,5 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     kwargs = vars(args)
-    set_dataset(kwargs.pop('dataset'))
+    set_dataset(kwargs.pop("dataset"))
     main(**kwargs)

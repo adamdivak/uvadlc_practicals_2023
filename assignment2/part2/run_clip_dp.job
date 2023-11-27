@@ -23,7 +23,7 @@ code_dir=./
 # Standard constants
 arch="ViT-B/32"
 text_prompt_template="This is a photo of a {}"
-epochs=3 # FIXME for testing
+epochs=20
 
 ## Set of experiments on CIFAR-10
 dataset="cifar10"
@@ -33,29 +33,23 @@ mkdir -p $root
 # deep prompting
 
 datasets=(cifar10 cifar100)
-injection_layers=(0 1 2 3 4 5 6 7)
+injection_layers=(0 3 7)
+
+default_parameters="--root $root --arch $arch --text_prompt_template $text_prompt_template --epochs $epochs --prompt_type deep_prompt --print_tqdm_interval 60"
 
 for dataset in "${datasets[@]}"; do
     for injection_layer in "${injection_layers[@]}"; do
         echo "Running experiment on $dataset injecting deep prompt into layer $injection_layer"
         python $code_dir/main.py \
+            "$default_parameters" \
             --dataset $dataset \
-            --arch $arch \
-            --text_prompt_template "$text_prompt_template" \
-            --epochs $epochs \
-            --prompt_type deep_prompt \
-            --injection_layer $injection_layer \
-            --root $root
+            --injection_layer $injection_layer
 
         echo "Evaluating experiment on $dataset injecting deep prompt into layer $injection_layer with test noise"
         python $code_dir/main.py \
+            --default_parameters \
             --dataset $dataset \
-            --arch $arch \
-            --text_prompt_template "$text_prompt_template" \
-            --epochs $epochs \
-            --prompt_type deep_prompt \
             --injection_layer $injection_layer \
-            --root $root \
             --evaluate \
             --resume_best \
             --test_noise

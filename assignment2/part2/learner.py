@@ -149,7 +149,7 @@ class Learner:
             if self.args.gpu is not None:
                 # best_acc1 may be from a checkpoint from a different GPU
                 best_acc1 = best_acc1.to(self.args.gpu)
-            if self.args.prompt_type == 'visual_prompt':
+            if self.args.prompt_type == "visual_prompt":
                 self.clip.prompt_learner.load_state_dict(checkpoint["state_dict"])
             else:
                 self.clip.load_state_dict(checkpoint["state_dict"])
@@ -160,6 +160,14 @@ class Learner:
             )
         else:
             print("=> no checkpoint found at '{}'".format(self.args.resume))
+
+    def resume_best_checkpoint(self):
+        """Resume best saved checkpoint"""
+        # Modifying the arguments is not very elegant, but checkpoint loading is tied to the args
+        # and I didn't want to modify that
+        self.args.resume = os.path.join(self.args.model_folder, "model_best.pth.tar")
+        print(f"Resuming best checkpoint..")
+        self.resume_checkpoint()
 
     def reproduceability(self, args):
         """Fixes the seed for reproducibility."""
@@ -230,7 +238,13 @@ class Learner:
         num_batches_per_epoch = len(self.train_loader)
 
         end = time.time()
-        for i, (images, target) in enumerate(tqdm(self.train_loader)):
+        for i, (images, target) in enumerate(
+            tqdm(
+                self.train_loader,
+                mininterval=self.args.print_tqdm_interval,
+                maxinterval=self.args.print_tqdm_interval,
+            )
+        ):
             # Measure data loading time
             data_time.update(time.time() - end)
 
@@ -251,6 +265,10 @@ class Learner:
             # - Compute the loss (using self.criterion)
             # - Perform a backward pass
             # - Update the parameters
+
+            # Adam: break loop requested, to speed up testing locally
+            if 0 < self.args.max_batches < i:
+                break
 
             with torch.autograd.set_detect_anomaly(True):
                 self.optimizer.zero_grad()
@@ -308,10 +326,20 @@ class Learner:
 
         with torch.no_grad():
             end = time.time()
-            for i, (images, target) in enumerate(tqdm(loader)):
+            for i, (images, target) in enumerate(
+                tqdm(
+                    loader,
+                    mininterval=self.args.print_tqdm_interval,
+                    maxinterval=self.args.print_tqdm_interval,
+                )
+            ):
                 #######################
                 # PUT YOUR CODE HERE  #
                 #######################
+
+                # Adam: break loop requested, to speed up testing locally
+                if 0 < self.args.max_batches < i:
+                    break
 
                 # TODO: Implement the evaluation step for a single batch
 

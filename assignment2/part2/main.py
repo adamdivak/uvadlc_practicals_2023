@@ -20,19 +20,35 @@ import argparse
 import torch
 from learner import Learner
 import json
+import warnings
+from utils import get_device
 
 
 def parse_option():
     parser = argparse.ArgumentParser("Visual Prompting for CLIP")
 
     parser.add_argument("--print_freq", type=int, default=10, help="print frequency")
-    parser.add_argument("--save_freq", type=int, default=10, help="save frequency")
+    # Adam: limit tqdm logging frequency
+    parser.add_argument(
+        "--print_tqdm_interval",
+        type=float,
+        default=1.0,
+        help="min and max interval to print tqdm progress bars to avoid polluting the Snellius log files too much",
+    )
+    parser.add_argument("--save_freq", type=int, default=50, help="save frequency")
     parser.add_argument("--batch_size", type=int, default=128, help="batch_size")
     parser.add_argument(
         "--num_workers", type=int, default=16, help="num of workers to use"
     )
     parser.add_argument(
         "--epochs", type=int, default=1000, help="number of training epochs"
+    )
+    # Adam: add option to quickly go through the training and evaluation to catch errors in the code
+    parser.add_argument(
+        "--max_batches",
+        type=int,
+        default=0,
+        help="limit number of batches in each training and evaluation loop to aid testing",
     )
     parser.add_argument(
         "--square_size",
@@ -140,7 +156,8 @@ def parse_option():
 
     args.num_workers = min(args.num_workers, os.cpu_count())
 
-    args.filename = "{}_{}_{}_{}_{}_{}_lr_{}_decay_{}_bsz_{}_warmup_{}_trial_{}".format(
+    args.filename = "{}_{}_{}_{}_{}_{}_{}_lr_{}_decay_{}_bsz_{}_warmup_{}_trial_{}".format(
+        args.prompt_type,  # Adam: add prompt type to avoid visual and deep prompting models overwriting each other
         args.method,
         args.prompt_size,
         args.dataset,
@@ -154,29 +171,15 @@ def parse_option():
         args.trial,
     )
 
-    # Added by me to easily resume from the best saved model for the given parameters to do additional evaluation
-    if args.resume_best:
-        args.resume = os.path.join(args.model_dir, "model_best.pth.tar")
-
-    def get_device() -> str:
-        """Returns the device for PyTorch to use."""
-        device = "cpu"
-        if torch.cuda.is_available():
-            device = "cuda"
-        # mac MPS support: https://pytorch.org/docs/stable/notes/mps.html
-        elif False and torch.backends.mps.is_available():  # FIXME
-            if not torch.backends.mps.is_built():
-                print(
-                    "MPS not available because the current PyTorch install was not built with MPS enabled."
-                )
-            else:
-                device = "mps"
-        return device
-
     args.device = get_device()
     args.model_folder = os.path.join(args.model_dir, args.filename)
     if not os.path.isdir(args.model_folder):
         os.makedirs(args.model_folder)
+
+    # Adam: option to easily resume from the best saved model for the given parameters to do additional evaluation
+    # without manually specifying the default file name in the job file
+    if args.resume_best:
+        args.resume = os.path.join(args.model_folder, "model_best.pth.tar")
 
     return args
 
@@ -186,16 +189,25 @@ def main():
     print(args)
     learn = Learner(args)
 
+    # Adam: collect and save results
     results_dir = "results_vp"
     os.makedirs(results_dir, exist_ok=True)
     top1_val_acc, top1_test_acc = None, None
+
     if args.evaluate:
+        if not args.resume:
+            warnings.warn(
+                f"Evaluation is requested but no previously trained checkpoint is loaded. "
+                f"An evaluation of the default model weights is performed, please make sure this is what you intended."
+            )
         top1_test_acc = learn.evaluate("test")
     else:
         learn.run()
+        learn.resume_best_checkpoint()  # Adam: force reloading the best checkpoint before model evaluation
         top1_val_acc = learn.evaluate("valid")
         top1_test_acc = learn.evaluate("test")
 
+    # Adam: save results into a single directory to make it easier to plot in the end
     result = vars(args)
     result["top1_val_acc"] = top1_val_acc
     result["top1_test_acc"] = top1_test_acc

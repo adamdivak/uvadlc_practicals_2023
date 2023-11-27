@@ -125,5 +125,25 @@ def save_checkpoint(state, args, is_best=False, filename="checkpoint.pth.tar"):
         print("saved best file")
 
 
+def get_device() -> str:
+    """Returns the device for PyTorch to use, including Mac support."""
+    device = "cpu"
+    if torch.cuda.is_available():
+        device = "cuda"
+    # mac MPS support: https://pytorch.org/docs/stable/notes/mps.html
+    # Adam: I tried adding faster Mac support, but the model failed with a cryptic error message that I couldn't fix.
+    # Assertion failed: (0 <= mpsAxis && mpsAxis < 4 && "Runtime canonicalization must simplify reduction axes to minor 4 dimensions."), function encodeNDArrayOp, file GPUReductionOps.mm, line 76.
+    # If you know how to fix this, it would be much appreciated if it could be incorporated next year, many people
+    # use Macs and having MPS enabled makes local debugging MUCH faster. Thanks!
+    elif False and torch.backends.mps.is_available():
+        if not torch.backends.mps.is_built():
+            print(
+                "MPS not available because the current PyTorch install was not built with MPS enabled."
+            )
+        else:
+            device = "mps"
+    return device
+
+
 class DummyArgs:
     pass

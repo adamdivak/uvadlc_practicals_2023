@@ -27,7 +27,7 @@ def parse_option():
     parser = argparse.ArgumentParser("Visual Prompting for CLIP")
 
     parser.add_argument("--print_freq", type=int, default=10, help="print frequency")
-    parser.add_argument("--save_freq", type=int, default=10, help="save frequency")
+    parser.add_argument("--save_freq", type=int, default=50, help="save frequency")
     parser.add_argument("--batch_size", type=int, default=128, help="batch_size")
     parser.add_argument(
         "--num_workers", type=int, default=16, help="num of workers to use"
@@ -60,7 +60,12 @@ def parse_option():
         choices=["visual_prompt", "deep_prompt"],
         default="visual_prompt",
     )
-    parser.add_argument("--prompt_num", type=int, default=4, help="number of learnable deep prompts to use")
+    parser.add_argument(
+        "--prompt_num",
+        type=int,
+        default=4,
+        help="number of learnable deep prompts to use",
+    )
     parser.add_argument(
         "--injection_layer",
         type=int,

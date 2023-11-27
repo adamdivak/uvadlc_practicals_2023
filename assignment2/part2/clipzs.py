@@ -387,6 +387,8 @@ def main():
             enumerate(loader),
             total=len(loader),
             leave=False,
+            mininterval=args.print_tqdm_interval,
+            maxinterval=args.print_tqdm_interval,
         )
     ):
         data, label = data.to(device), label.to(device)
