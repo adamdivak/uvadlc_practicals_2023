@@ -7,8 +7,8 @@
 #SBATCH --cpus-per-task=3
 #SBATCH --time=04:00:00
 #SBATCH --mem=32000M
-#SBATCH --output=clip_zs_output_%A.out
-#SBATCH --error=clip_zs_error_%A.out
+#SBATCH --output=logs_zs/clip_zs_output_%A.out
+#SBATCH --error=logs_zs/clip_zs_error_%A.out
 
 module purge
 module load 2022

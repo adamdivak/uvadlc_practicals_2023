@@ -7,8 +7,8 @@
 #SBATCH --cpus-per-task=3
 #SBATCH --time=04:00:00
 #SBATCH --mem=32000M
-#SBATCH --output=clip_vp_output_%A.out
-#SBATCH --error=clip_vp_error_%A.out
+#SBATCH --output=logs_vp/clip_vp_output_%A.out
+#SBATCH --error=logs_vp/clip_vp_error_%A.out
 
 module purge
 module load 2022
@@ -36,7 +36,7 @@ datasets=(cifar10 cifar100)
 methods=(fixed_patch padding fixed_patch)
 prompt_sizes=(1 30 224)
 
-default_parameters=--root $root --arch $arch --epochs $epochs --print_freq 100 --print_tqdm_interval 60
+default_parameters="--root $root --arch $arch --epochs $epochs --print_freq 100 --print_tqdm_interval 60"
 
 for dataset in "${datasets[@]}"; do
     for i in "${!methods[@]}"; do

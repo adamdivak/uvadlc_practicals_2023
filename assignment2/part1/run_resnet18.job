@@ -7,8 +7,8 @@
 #SBATCH --cpus-per-task=3
 #SBATCH --time=04:00:00
 #SBATCH --mem=32000M
-#SBATCH --output=resnet18_output_%A.out
-#SBATCH --error=resnet18_error_%A.out
+#SBATCH --output=logs/resnet18_output_%A.out
+#SBATCH --error=logs/resnet18_error_%A.out
 
 module purge
 module load 2022
