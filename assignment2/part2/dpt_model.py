@@ -82,16 +82,19 @@ class DeepPromptCLIP(nn.Module):
         #######################
 
         # TODO: Initialize the learnable deep prompt.
-        # Hint: consider the shape required for the deep prompt to be compatible with the CLIP model# Hint: CLIP uses different datatypes for CPU (float32) and GPU (float16)
+        # Hint: consider the shape required for the deep prompt to be compatible with the CLIP model
+        # Hint: CLIP uses different datatypes for CPU (float32) and GPU (float16)
         # Hint: use args.prompt_num to specify the number of deep prompts to use
 
         # FIXME this is hard-coded now, read these parameters from within the model
         # The second axis is for the batch. We don't know the batch size here, but setting it to one
         # will (I hope..) make broadcasting to expand it later as needed
-        self.deep_prompt = torch.nn.Parameter(torch.zeros(50, 1, 768))
-        self.deep_prompt.data = self.deep_prompt.data.half().to(
-            args.device
-        )  # hard-coded fp16
+        embedding_dimension = 768
+        self.deep_prompt = nn.Parameter(
+            torch.randn(args.prompt_num, 1, embedding_dimension)
+            .to(args.device)
+            .type(torch.float16)  # hard-coded fp16
+        )
 
         #######################
         # END OF YOUR CODE    #
@@ -162,10 +165,12 @@ class DeepPromptCLIP(nn.Module):
         # - Inject the deep prompt at the specified layer (self.injection_layer).
 
         # Hint: Beware of the batch size (the deep prompt is the same for all images in the batch).
-
+        batch_size = x.shape[1]
         for i, transformer_layer in enumerate(image_encoder.transformer.resblocks):
             if i == self.injection_layer:
-                x = x + self.deep_prompt
+                # x = x + self.deep_prompt  # This is similar to what we did with the visual prompts, directly modifying
+                # the input. This is NOT what we want to do with the deep prompts
+                x = torch.cat([x, self.deep_prompt.repeat(1, batch_size, 1)], dim=0)
             x = transformer_layer(x)
         #######################
         # END OF YOUR CODE    #
