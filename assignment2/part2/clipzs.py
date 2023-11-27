@@ -364,8 +364,7 @@ def main():
 
     # Part 3. (Optional) Visualize predictions
     if args.visualize_predictions:
-        if args.visualize_prompt:
-            os.makedirs("images", exist_ok=True)
+        os.makedirs("images", exist_ok=True)
 
         num_viz = 8
         idx = np.random.choice(len(dataset), num_viz, replace=False)
