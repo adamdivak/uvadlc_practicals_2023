@@ -189,6 +189,9 @@ def main():
     print(args)
     learn = Learner(args)
 
+    if args.visualize_prompt:
+        os.makedirs("images", exist_ok=True)
+
     # Adam: collect and save results
     results_dir = "results_vp"
     os.makedirs(results_dir, exist_ok=True)
@@ -204,6 +207,7 @@ def main():
     else:
         learn.run()
         learn.resume_best_checkpoint()  # Adam: force reloading the best checkpoint before model evaluation
+
         top1_val_acc = learn.evaluate("valid")
         top1_test_acc = learn.evaluate("test")
 
@@ -215,6 +219,13 @@ def main():
     fn = f"{args.dataset}_{args.prompt_type}_{args.method}_{args.prompt_num}_{args.injection_layer}_{args.prompt_size}_{args.test_noise}.json"
     with open(f"{results_dir}/{fn}", "w") as f:
         json.dump(result, f)
+
+    # Adam: if visualize prompt is requested then also visualize after training/loading the best model,
+    # to see what we've actually learnt
+    if args.visualize_prompt:
+        learn.clip.visualize_prompt(
+            filename=f"images/prompt_{args.method}_after_training"
+        )
 
 
 if __name__ == "__main__":

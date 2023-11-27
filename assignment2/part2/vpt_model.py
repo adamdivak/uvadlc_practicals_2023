@@ -101,7 +101,9 @@ class VisualPromptCLIP(nn.Module):
         self.prompt_learner = PROMPT_TYPES[args.method](args)
 
         if args.visualize_prompt:
-            self.visualize_prompt(args.method)
+            self.visualize_prompt(
+                filename=f"images/prompt_{args.method}_before_training"
+            )
 
     def forward(self, images):
         """Forward pass of the model."""
@@ -149,11 +151,11 @@ class VisualPromptCLIP(nn.Module):
         return model
 
     @torch.no_grad()
-    def visualize_prompt(self, method):
+    def visualize_prompt(self, filename):
         """Visualizes the prompt."""
         fake_img = torch.ones(1, 3, 224, 224)
         prompted_img = self.prompt_learner(fake_img)[0].cpu()
         prompted_img = torch.clamp(prompted_img, 0, 1)
 
         print("Visualizing prompt...")
-        plt.imsave(f"prompt_{method}.png", prompted_img.permute(1, 2, 0).numpy())
+        plt.imsave(f"{filename}.png", prompted_img.permute(1, 2, 0).numpy())

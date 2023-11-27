@@ -344,7 +344,7 @@ def evaluate_model(model, data_loader, device, max_batches):
             _, pred_t = torch.max(outputs_t, dim=1)
             epoch_preds.append(pred_t.cpu().numpy())
             epoch_labels.append(target_t.cpu().numpy())
-            batch_pbar.set_description(f"Eval batch: {batch_idx:5}")
+            batch_pbar.set_description(f"Eval batch: {batch_idx:5}", refresh=False)
 
     epoch_preds = np.concatenate(epoch_preds)
     epoch_labels = np.concatenate(epoch_labels)

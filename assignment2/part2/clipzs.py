@@ -96,6 +96,21 @@ def parse_option():
         help="whether to visualize the predictions of the first batch",
     )
 
+    # Adam: limit tqdm logging frequency
+    parser.add_argument(
+        "--print_tqdm_interval",
+        type=float,
+        default=1.0,
+        help="min and max interval to print tqdm progress bars to avoid polluting the Snellius log files too much",
+    )
+    # Adam: add option to quickly go through the training and evaluation to catch errors in the code
+    parser.add_argument(
+        "--max_batches",
+        type=int,
+        default=0,
+        help="limit number of batches in each training and evaluation loop to aid testing",
+    )
+
     args = parser.parse_args()
     args.device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -349,6 +364,9 @@ def main():
 
     # Part 3. (Optional) Visualize predictions
     if args.visualize_predictions:
+        if args.visualize_prompt:
+            os.makedirs("images", exist_ok=True)
+
         num_viz = 8
         idx = np.random.choice(len(dataset), num_viz, replace=False)
         images = [dataset[i][0] for i in idx]
@@ -361,7 +379,7 @@ def main():
             if args.prompt_template
             else "default"
         )
-        fig_file = f"{args.dataset}-{args.split}_{c_names}_{prompt}.png"
+        fig_file = f"images/{args.dataset}-{args.split}_{c_names}_{prompt}.png"
         visualize_predictions(images, logits, clipzs.class_names, fig_file)
 
     if args.class_names is not None:

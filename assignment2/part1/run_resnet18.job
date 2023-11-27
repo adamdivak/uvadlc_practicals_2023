@@ -28,13 +28,13 @@ for dataset in "${datasets[@]}"; do
   # It's not easy to "negate" the augmentation_name and test_noise options with the given cmd arguments,
   # so enumerate the combinations instead of using for loops
 
-  # Train without augmentation
+  # Train without augmentation, no noise
   python $code_dir/train.py --print_tqdm_interval 60 --dataset $dataset
 
   # ..evaluate with noise
   python $code_dir/train.py --print_tqdm_interval 60 --dataset $dataset --resume_best --evaluate --test_noise
 
-  # Train with augmentation
+  # Train with augmentation, no noise
   python $code_dir/train.py --print_tqdm_interval 60 --dataset $dataset --augmentation_name auto_augment
 
   # ..evaluate with noise
