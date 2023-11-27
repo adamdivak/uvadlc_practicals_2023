@@ -82,7 +82,8 @@ class DeepPromptCLIP(nn.Module):
         #######################
 
         # TODO: Initialize the learnable deep prompt.
-        # Hint: consider the shape required for the deep prompt to be compatible with the CLIP model
+        # Hint: consider the shape required for the deep prompt to be compatible with the CLIP model# Hint: CLIP uses different datatypes for CPU (float32) and GPU (float16)
+        # Hint: use args.prompt_num to specify the number of deep prompts to use
 
         # FIXME this is hard-coded now, read these parameters from within the model
         # The second axis is for the batch. We don't know the batch size here, but setting it to one

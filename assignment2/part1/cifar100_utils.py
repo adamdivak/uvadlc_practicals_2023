@@ -16,10 +16,24 @@
 
 import torch
 
-from torchvision.datasets import CIFAR100
+from torchvision.datasets import CIFAR100, CIFAR10
 from torch.utils.data import random_split
 from torchvision.transforms import v2 as transforms
 
+
+dataset_name = "cifar100"
+
+def set_dataset(dataset):
+    global dataset_name
+    dataset_name = dataset
+
+def get_dataset(dataset):
+    if dataset == "cifar100":
+        return CIFAR100
+    elif dataset == "cifar10":
+        return CIFAR10
+    else:
+        raise ValueError("dataset should be either cifar100 or cifar10")
 
 class AddGaussianNoise(torch.nn.Module):
     def __init__(self, mean=0.0, std=0.1, always_apply=False):
@@ -115,10 +129,11 @@ def get_train_validation_set(data_dir, validation_size=5000, augmentation_name=N
     )
 
     # We need to load the dataset twice because we want to use them with different transformations
-    train_dataset = CIFAR100(
+    dataset = get_dataset(dataset_name)
+    train_dataset = dataset(
         root=data_dir, train=True, download=True, transform=train_transform
     )
-    val_dataset = CIFAR100(
+    val_dataset = dataset(
         root=data_dir, train=True, download=True, transform=val_transform
     )
 
@@ -167,7 +182,8 @@ def get_test_set(data_dir, test_noise):
         add_augmentation("test_noise", test_transform)
     test_transform = transforms.Compose(test_transform)
 
-    test_dataset = CIFAR100(
+    dataset = get_dataset(dataset_name)
+    test_dataset = dataset(
         root=data_dir, train=False, download=True, transform=test_transform
     )
     return test_dataset

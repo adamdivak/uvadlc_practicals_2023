@@ -60,6 +60,7 @@ def parse_option():
         choices=["visual_prompt", "deep_prompt"],
         default="visual_prompt",
     )
+    parser.add_argument("--prompt_num", type=int, default=4, help="number of learnable deep prompts to use")
     parser.add_argument(
         "--injection_layer",
         type=int,
