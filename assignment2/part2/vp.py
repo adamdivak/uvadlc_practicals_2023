@@ -49,7 +49,7 @@ class FixedPatchPrompter(nn.Module):
 
         self.pad = torch.nn.Parameter(
             torch.randn(1, 3, self.prompt_size, self.prompt_size)
-        )
+        ).to(args.device)
 
         #######################
         # END OF YOUR CODE    #
@@ -99,17 +99,17 @@ class PadPrompter(nn.Module):
 
         self.pad_up = torch.nn.Parameter(
             torch.randn(1, 3, self.pad_size, self.image_size)
-        )
+        ).to(args.device)
         self.pad_down = torch.nn.Parameter(
             torch.randn(1, 3, self.pad_size, self.image_size)
-        )
+        ).to(args.device)
         # Left and right are not image_size in height, as that would cause the corners to be covered twice!
         self.pad_left = torch.nn.Parameter(
             torch.randn(1, 3, self.image_size - 2 * self.pad_size, self.pad_size)
-        )
+        ).to(args.device)
         self.pad_right = torch.nn.Parameter(
             torch.randn(1, 3, self.image_size - 2 * self.pad_size, self.pad_size)
-        )
+        ).to(args.device)
         #######################
         # END OF YOUR CODE    #
         #######################
