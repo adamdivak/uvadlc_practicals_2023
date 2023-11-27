@@ -102,7 +102,7 @@ class VisualPromptCLIP(nn.Module):
 
         if args.visualize_prompt:
             self.visualize_prompt(
-                filename=f"images/prompt_{args.method}_before_training"
+                filename=f"images/prompt_{args.method}_{args.prompt_size}_before_training"
             )
 
     def forward(self, images):

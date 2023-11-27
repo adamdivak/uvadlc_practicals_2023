@@ -33,8 +33,8 @@ mkdir -p $root
 # visual prompting
 
 datasets=(cifar10 cifar100)
-methods=(fixed_patch padding)
-prompt_sizes=(1 30)
+methods=(fixed_patch padding fixed_patch)
+prompt_sizes=(1 30 224)
 
 default_parameters=--root $root --arch $arch --epochs $epochs --print_freq 100 --print_tqdm_interval 60
 

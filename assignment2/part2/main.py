@@ -187,10 +187,11 @@ def parse_option():
 def main():
     args = parse_option()
     print(args)
-    learn = Learner(args)
 
     if args.visualize_prompt:
         os.makedirs("images", exist_ok=True)
+
+    learn = Learner(args)
 
     # Adam: collect and save results
     results_dir = "results_vp"
@@ -224,7 +225,7 @@ def main():
     # to see what we've actually learnt
     if args.visualize_prompt:
         learn.clip.visualize_prompt(
-            filename=f"images/prompt_{args.method}_after_training"
+            filename=f"images/prompt_{args.method}_{args.prompt_size}_after_training"
         )
 
 

@@ -103,11 +103,12 @@ class PadPrompter(nn.Module):
         self.pad_down = torch.nn.Parameter(
             torch.randn(1, 3, self.pad_size, self.image_size)
         )
+        # Left and right are not image_size in height, as that would cause the corners to be covered twice!
         self.pad_left = torch.nn.Parameter(
-            torch.randn(1, 3, self.image_size, self.pad_size)
+            torch.randn(1, 3, self.image_size - 2 * self.pad_size, self.pad_size)
         )
         self.pad_right = torch.nn.Parameter(
-            torch.randn(1, 3, self.image_size, self.pad_size)
+            torch.randn(1, 3, self.image_size - 2 * self.pad_size, self.pad_size)
         )
         #######################
         # END OF YOUR CODE    #
@@ -126,8 +127,9 @@ class PadPrompter(nn.Module):
 
         x[:, :, : self.pad_size, :] += self.pad_up
         x[:, :, -self.pad_size :, :] += self.pad_down
-        x[:, :, :, : self.pad_size] += self.pad_left
-        x[:, :, :, -self.pad_size :] += self.pad_right
+        # Left and right are not image_size in height, as that would cause the corners to be covered twice!
+        x[:, :, self.pad_size : -self.pad_size, : self.pad_size] += self.pad_left
+        x[:, :, self.pad_size : -self.pad_size, -self.pad_size :] += self.pad_right
 
         return x
         #######################
