@@ -108,6 +108,7 @@ def train_model(
     device,
     augmentation_name=None,
     print_tqdm_interval=0.1,
+    max_batches=0,
 ):
     """
     Trains a given model architecture for the specified hyperparameters.
@@ -176,6 +177,10 @@ def train_model(
                 maxinterval=args.print_tqdm_interval,
             )
         ):
+            # Adam: break loop requested, to speed up testing locally
+            if 0 < max_batches < batch_idx:
+                break
+
             data_, target_ = data_.to(device), target_.to(device)
 
             # log some debug info in the very first batch
@@ -227,7 +232,9 @@ def train_model(
                 refresh=False,
             )
 
-        val_accuracy = evaluate_model(model, val_loader, device)
+        val_accuracy = evaluate_model(
+            model, val_loader, device, max_batches=max_batches
+        )
         # writer.add_scalar(
         #     "validation loss",
         #     val_metrics["accuracy"],
@@ -268,11 +275,7 @@ def train_model(
     )
 
     # Load the best model on val accuracy and return it.
-    checkpoint = torch.load(checkpoint_name)
-    model.load_state_dict(checkpoint["model_state_dict"])
-    optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
-    # epoch = checkpoint['epoch']
-    # loss = checkpoint['loss']
+    model, best_epoch = load_model(checkpoint_name, model)
 
     #######################
     # END OF YOUR CODE    #
@@ -281,7 +284,20 @@ def train_model(
     return model
 
 
-def evaluate_model(model, data_loader, device):
+def load_model(checkpoint_name, model):
+    """Load model from a given checkpoint"""
+    checkpoint = torch.load(checkpoint_name)
+    model.load_state_dict(checkpoint["model_state_dict"])
+    # FIXME we should also load the optimizer if we plan to continue training
+    # Now I only use model loading for evaluation, and the optimizer wasn't immediately available
+    # at all places where I call this function, so I skipped this
+    # optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+    epoch = checkpoint["epoch"]
+    # loss = checkpoint['loss']
+    return model, epoch
+
+
+def evaluate_model(model, data_loader, device, max_batches):
     """
     Evaluates a trained model on a given dataset.
 
@@ -317,6 +333,10 @@ def evaluate_model(model, data_loader, device):
                 maxinterval=args.print_tqdm_interval,
             )
         ):
+            # Adam: break loop requested, to speed up testing locally
+            if 0 < max_batches < batch_idx:
+                break
+
             data_t, target_t = data_t.to(device), target_t.to(device)
             outputs_t = model(data_t)
             loss_t = loss_module(outputs_t, target_t)
@@ -347,6 +367,9 @@ def main(
     augmentation_name,
     test_noise,
     print_tqdm_interval,
+    evaluate=False,
+    resume_best=False,
+    max_batches=0,
 ):
     """
     Main function for training and testing the model.
@@ -368,31 +391,44 @@ def main(
     # Set the device to use for training
     device = get_device()
 
+    # Set up checkpoint to save to or load from
+    model_dir = "save/models"
+    os.makedirs(model_dir, exist_ok=True)
+    checkpoint_name = f"{model_dir}/restnet18_best_model_{dataset_name}_{augmentation_name}_{lr}_{batch_size}.pt"
+
     # Load the model
     model = get_model().to(device)
 
-    # Get the augmentation to use
-    # we just pass the name here, nothing to do
+    # Load best previously trained model if required
+    if resume_best:
+        # Load the best model on val accuracy and return it.
+        model, best_epoch = load_model(checkpoint_name, model)
 
-    # Train the model
-    model = train_model(
-        model=model,
-        lr=lr,
-        batch_size=batch_size,
-        epochs=epochs,
-        data_dir=data_dir,
-        checkpoint_name="restnet18_best_model.pt",
-        device=device,
-        augmentation_name=augmentation_name,
-        print_tqdm_interval=print_tqdm_interval,
-    )
+    # Train the model, unless we are in evaluation-only mode
+    if not evaluate:
+        # Get the augmentation to use
+        # ..we just pass the name here, nothing to do
+
+        # Train the model
+        model = train_model(
+            model=model,
+            lr=lr,
+            batch_size=batch_size,
+            epochs=epochs,
+            data_dir=data_dir,
+            checkpoint_name=checkpoint_name,
+            device=device,
+            augmentation_name=augmentation_name,
+            print_tqdm_interval=print_tqdm_interval,
+            max_batches=max_batches,
+        )
 
     # Evaluate the model on the test set
     test_dataset = get_test_set(data_dir, test_noise)
     test_loader = data.DataLoader(
         dataset=test_dataset, batch_size=batch_size, shuffle=False, drop_last=False
     )
-    test_accuracy = evaluate_model(model, test_loader, device)
+    test_accuracy = evaluate_model(model, test_loader, device, max_batches=max_batches)
     print(f"Test accuracy of best model: {test_accuracy}")
 
     results_dir = "results_resnet18"
@@ -451,6 +487,23 @@ if __name__ == "__main__":
         default=False,
         action="store_true",
         help="Whether to test the model on noisy images or not.",
+    )
+    # Adam: add some helpful flags like in part2 to only evaluate when checking test_noise
+    parser.add_argument(
+        "--resume_best",
+        default=False,
+        action="store_true",
+        help="resume best model from default checkpoint",
+    )
+    parser.add_argument(
+        "--evaluate", default=False, action="store_true", help="evaluate model test set"
+    )
+    # Adam: add option to quickly go through the training and evaluation to catch errors in the code
+    parser.add_argument(
+        "--max_batches",
+        type=int,
+        default=0,
+        help="limit number of batches in each training and evaluation loop to aid testing",
     )
 
     args = parser.parse_args()
