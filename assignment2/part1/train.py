@@ -32,7 +32,7 @@ from cifar100_utils import (
     get_train_validation_set,
     get_test_set,
     set_dataset,
-    dataset_name,
+    get_dataset_name,
 )
 
 
@@ -394,7 +394,7 @@ def main(
     # Set up checkpoint to save to or load from
     model_dir = "save/models"
     os.makedirs(model_dir, exist_ok=True)
-    checkpoint_name = f"{model_dir}/restnet18_best_model_{dataset_name}_{augmentation_name}_{lr}_{batch_size}.pt"
+    checkpoint_name = f"{model_dir}/restnet18_best_model_{get_dataset_name()}_{augmentation_name}_{lr}_{batch_size}.pt"
 
     # Load the model
     model = get_model().to(device)
@@ -433,9 +433,9 @@ def main(
 
     results_dir = "results_resnet18"
     os.makedirs(results_dir, exist_ok=True)
-    fn = f"resnet_{dataset_name}_{augmentation_name}_{test_noise}.json"
+    fn = f"resnet_{get_dataset_name()}_{augmentation_name}_{test_noise}.json"
     result = {
-        "dataset": dataset_name,
+        "dataset": get_dataset_name(),
         "augmentation_name": augmentation_name,
         "test_noise": test_noise,
         "test_accuracy": test_accuracy,

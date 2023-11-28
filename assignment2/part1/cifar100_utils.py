@@ -29,6 +29,11 @@ def set_dataset(dataset):
     dataset_name = dataset
 
 
+def get_dataset_name():
+    global dataset_name
+    return dataset_name
+
+
 def get_dataset(dataset):
     if dataset == "cifar100":
         return CIFAR100
