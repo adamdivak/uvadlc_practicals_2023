@@ -23,7 +23,7 @@ code_dir=./
 # Standard constants
 arch="ViT-B/32"
 text_prompt_template="This is a photo of a {}"
-epochs=20
+epochs=40
 
 ## Set of experiments on CIFAR-10
 dataset="cifar10"
@@ -33,7 +33,7 @@ mkdir -p $root
 # deep prompting
 
 datasets=(cifar10 cifar100)
-injection_layers=(0 3 7)
+injection_layers=(0 2 4 6 8 10)
 
 default_parameters="--root $root --arch $arch --epochs $epochs --prompt_type deep_prompt --print_freq 100 --print_tqdm_interval 60"
 

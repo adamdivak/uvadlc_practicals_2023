@@ -101,6 +101,17 @@ def parse_option():
     parser.add_argument(
         "--prompt_size", type=int, default=30, help="size for visual prompts"
     )
+    # Adam
+    parser.add_argument(
+        "--prompt_init_method",
+        type=str,
+        default="random",
+        choices=[
+            "random",
+            "empty",
+        ],
+        help="choose visual prompting method",
+    )
     parser.add_argument(
         "--text_prompt_template",
         type=str,
@@ -156,12 +167,13 @@ def parse_option():
 
     args.num_workers = min(args.num_workers, os.cpu_count())
 
-    args.filename = "{}_{}_{}_{}_{}_{}_{}_{}_{}_lr_{}_decay_{}_bsz_{}_warmup_{}_trial_{}".format(
+    args.filename = "{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_lr_{}_decay_{}_bsz_{}_warmup_{}_trial_{}".format(
         args.prompt_type,  # Adam: add prompt type to avoid visual and deep prompting models overwriting each other
         args.method,
         args.prompt_size,
         args.injection_layer,
         args.prompt_num,
+        args.prompt_init_method,
         args.dataset,
         args.model,
         args.arch,
@@ -219,7 +231,7 @@ def main():
     result["top1_val_acc"] = top1_val_acc
     result["top1_test_acc"] = top1_test_acc
     result["best_epoch"] = learn.best_epoch
-    fn = f"{args.dataset}_{args.prompt_type}_{args.method}_{args.prompt_num}_{args.injection_layer}_{args.prompt_size}_{args.test_noise}.json"
+    fn = f"{args.dataset}_{args.prompt_type}_{args.method}_{args.prompt_num}_{args.injection_layer}_{args.prompt_size}_{args.prompt_init_method}_{args.test_noise}.json"
     with open(f"{results_dir}/{fn}", "w") as f:
         json.dump(result, f)
 
@@ -227,7 +239,7 @@ def main():
     # to see what we've actually learnt
     if args.visualize_prompt:
         learn.clip.visualize_prompt(
-            filename=f"images/prompt_{args.method}_{args.prompt_size}_after_training",
+            filename=f"images/prompt_{args.method}_{args.prompt_size}_{args.prompt_init_method}_after_training",
             device=args.device,
         )
 

@@ -102,6 +102,13 @@ class DeepPromptCLIP(nn.Module):
             )  # hard-coded fp16
         )
 
+        num_transformer_layers = len(self.clip_model.visual.transformer.resblocks)
+        if self.injection_layer >= num_transformer_layers:
+            raise ValueError(
+                f"This CLIP implementation has {num_transformer_layers} transformer layers, "
+                f"specifying an injection layer of {self.injection_layer} is invalid."
+            )
+
         #######################
         # END OF YOUR CODE    #
         #######################
