@@ -156,10 +156,12 @@ def parse_option():
 
     args.num_workers = min(args.num_workers, os.cpu_count())
 
-    args.filename = "{}_{}_{}_{}_{}_{}_{}_lr_{}_decay_{}_bsz_{}_warmup_{}_trial_{}".format(
+    args.filename = "{}_{}_{}_{}_{}_{}_{}_{}_{}_lr_{}_decay_{}_bsz_{}_warmup_{}_trial_{}".format(
         args.prompt_type,  # Adam: add prompt type to avoid visual and deep prompting models overwriting each other
         args.method,
         args.prompt_size,
+        args.injection_layer,
+        args.prompt_num,
         args.dataset,
         args.model,
         args.arch,
@@ -225,7 +227,8 @@ def main():
     # to see what we've actually learnt
     if args.visualize_prompt:
         learn.clip.visualize_prompt(
-            filename=f"images/prompt_{args.method}_{args.prompt_size}_after_training"
+            filename=f"images/prompt_{args.method}_{args.prompt_size}_after_training",
+            device=args.device,
         )
 
 

@@ -102,7 +102,8 @@ class VisualPromptCLIP(nn.Module):
 
         if args.visualize_prompt:
             self.visualize_prompt(
-                filename=f"images/prompt_{args.method}_{args.prompt_size}_before_training"
+                filename=f"images/prompt_{args.method}_{args.prompt_size}_before_training",
+                device=args.device,
             )
 
     def forward(self, images):
@@ -151,9 +152,9 @@ class VisualPromptCLIP(nn.Module):
         return model
 
     @torch.no_grad()
-    def visualize_prompt(self, filename):
+    def visualize_prompt(self, filename, device):
         """Visualizes the prompt."""
-        fake_img = torch.ones(1, 3, 224, 224)
+        fake_img = torch.ones(1, 3, 224, 224).to(device)
         prompted_img = self.prompt_learner(fake_img)[0].cpu()
         prompted_img = torch.clamp(prompted_img, 0, 1)
 
