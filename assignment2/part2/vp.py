@@ -47,9 +47,12 @@ class FixedPatchPrompter(nn.Module):
         # - You can initialize the patch randomly in N(0, 1) using torch.randn
         self.prompt_size = args.prompt_size
 
+        # Note: I had to explicitly create the tensor on the given device.
+        # If I simply moved it to the device using .to(device) then it didn't get registered
+        # as something that needs gradients to be calculated
         self.pad = torch.nn.Parameter(
-            torch.randn(1, 3, self.prompt_size, self.prompt_size)
-        ).to(args.device)
+            torch.randn(1, 3, self.prompt_size, self.prompt_size, device=args.device)
+        )
 
         #######################
         # END OF YOUR CODE    #
@@ -97,19 +100,34 @@ class PadPrompter(nn.Module):
         # - Shape of self.pad_up and self.pad_down should be (1, 3, pad_size, image_size)
         # - See Fig 2.(g)/(h) and think about the shape of self.pad_left and self.pad_right
 
+        # Note: I had to explicitly create the tensor on the given device.
+        # If I simply moved it to the device using .to(device) then it didn't get registered
+        # as something that needs gradients to be calculated
         self.pad_up = torch.nn.Parameter(
-            torch.randn(1, 3, self.pad_size, self.image_size)
-        ).to(args.device)
+            torch.randn(1, 3, self.pad_size, self.image_size, device=args.device)
+        )
         self.pad_down = torch.nn.Parameter(
-            torch.randn(1, 3, self.pad_size, self.image_size)
-        ).to(args.device)
+            torch.randn(1, 3, self.pad_size, self.image_size, device=args.device)
+        )
         # Left and right are not image_size in height, as that would cause the corners to be covered twice!
         self.pad_left = torch.nn.Parameter(
-            torch.randn(1, 3, self.image_size - 2 * self.pad_size, self.pad_size)
-        ).to(args.device)
+            torch.randn(
+                1,
+                3,
+                self.image_size - 2 * self.pad_size,
+                self.pad_size,
+                device=args.device,
+            )
+        )
         self.pad_right = torch.nn.Parameter(
-            torch.randn(1, 3, self.image_size - 2 * self.pad_size, self.pad_size)
-        ).to(args.device)
+            torch.randn(
+                1,
+                3,
+                self.image_size - 2 * self.pad_size,
+                self.pad_size,
+                device=args.device,
+            )
+        )
         #######################
         # END OF YOUR CODE    #
         #######################

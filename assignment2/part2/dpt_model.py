@@ -86,14 +86,20 @@ class DeepPromptCLIP(nn.Module):
         # Hint: CLIP uses different datatypes for CPU (float32) and GPU (float16)
         # Hint: use args.prompt_num to specify the number of deep prompts to use
 
-        # FIXME this is hard-coded now, read these parameters from within the model
+        # FIXME embedding_dimension is hard-coded now, read these parameters from within the model
         # The second axis is for the batch. We don't know the batch size here, but setting it to one
         # will (I hope..) make broadcasting to expand it later as needed
+
+        # Note: I had to explicitly create the tensor on the given device.
+        # If I simply moved it to the device using .to(device) then it didn't get registered
+        # as something that needs gradients to be calculated
         embedding_dimension = 768
         self.deep_prompt = nn.Parameter(
-            torch.randn(args.prompt_num, 1, embedding_dimension)
-            .to(args.device)
-            .type(torch.float16)  # hard-coded fp16
+            torch.randn(
+                args.prompt_num, 1, embedding_dimension, device=args.device
+            ).type(
+                torch.float16
+            )  # hard-coded fp16
         )
 
         #######################
