@@ -43,7 +43,7 @@ for dataset in "${datasets[@]}"; do
     for i in "${!methods[@]}"; do
         method=${methods[$i]}
         prompt_size=${prompt_sizes[$i]}
-        prompt_init_method=${prompt_sizes[$i]}
+        prompt_init_method=${prompt_init_method[$i]}
         echo "Running experiment on $dataset with $method and prompt size $prompt_size"
         python $code_dir/main.py \
             $default_parameters \
