@@ -94,6 +94,9 @@ def add_augmentation(augmentation_name, transform_list):
 
         # Add the new transformation to the list.
         transform_list.append(transform)
+    elif augmentation_name == "my_augmentation":
+        transform_list.append(transforms.RandomHorizontalFlip(p=0.5))
+        transform_list.append(transforms.CenterCrop(size=200))
     else:
         raise NotImplementedError(f"Augmentation name {augmentation_name}")
 
