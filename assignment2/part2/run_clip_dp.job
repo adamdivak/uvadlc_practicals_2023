@@ -55,5 +55,14 @@ for dataset in "${datasets[@]}"; do
             --evaluate \
             --resume_best \
             --test_noise
+
+        echo "Evaluating experiment on both datasets injecting deep prompt into layer $injection_layer"
+        python $code_dir/cross_dataset.py \
+            $default_parameters \
+            --text_prompt_template "$text_prompt_template" \
+            --dataset $dataset \
+            --injection_layer $injection_layer \
+            --evaluate \
+            --resume_best
     done
 done

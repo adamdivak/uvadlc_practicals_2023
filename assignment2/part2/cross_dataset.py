@@ -23,12 +23,20 @@ from clip import clip
 from dataset import load_dataset, construct_dataloader
 from pprint import pprint
 from utils import DummyArgs
+import json
 
 
 def parse_option():
     parser = argparse.ArgumentParser("Visual Prompting for CLIP")
 
     parser.add_argument("--print_freq", type=int, default=10, help="print frequency")
+    # Adam: limit tqdm logging frequency
+    parser.add_argument(
+        "--print_tqdm_interval",
+        type=float,
+        default=1.0,
+        help="min and max interval to print tqdm progress bars to avoid polluting the Snellius log files too much",
+    )
     parser.add_argument("--save_freq", type=int, default=50, help="save frequency")
     parser.add_argument("--batch_size", type=int, default=128, help="batch_size")
     parser.add_argument(
@@ -36,6 +44,13 @@ def parse_option():
     )
     parser.add_argument(
         "--epochs", type=int, default=1000, help="number of training epochs"
+    )
+    # Adam: add option to quickly go through the training and evaluation to catch errors in the code
+    parser.add_argument(
+        "--max_batches",
+        type=int,
+        default=0,
+        help="limit number of batches in each training and evaluation loop to aid testing",
     )
     parser.add_argument(
         "--square_size",
@@ -67,11 +82,37 @@ def parse_option():
         ],
         help="choose visual prompting method",
     )
-    parser.add_argument("--prompt_type", type=str, default="visual_prompt", help="what type of prompt to use")
-    parser.add_argument("--prompt_num", type=int, default=4, help="number of learnable deep prompts to use")
-    parser.add_argument("--injection_layer", type=int, default=0, help="id of transformer layer to inject prompt into")
+    parser.add_argument(
+        "--prompt_type",
+        type=str,
+        default="visual_prompt",
+        help="what type of prompt to use",
+    )
+    parser.add_argument(
+        "--prompt_num",
+        type=int,
+        default=4,
+        help="number of learnable deep prompts to use",
+    )
+    parser.add_argument(
+        "--injection_layer",
+        type=int,
+        default=0,
+        help="id of transformer layer to inject prompt into",
+    )
     parser.add_argument(
         "--prompt_size", type=int, default=30, help="size for visual prompts"
+    )
+    # Adam:
+    parser.add_argument(
+        "--prompt_init_method",
+        type=str,
+        default="random",
+        choices=[
+            "random",
+            "empty",
+        ],
+        help="initialization method for the visual prompts",
     )
     parser.add_argument(
         "--text_prompt_template",
@@ -112,6 +153,12 @@ def parse_option():
         "--resume", type=str, default=None, help="path to resume from checkpoint"
     )
     parser.add_argument(
+        "--resume_best",
+        default=False,
+        action="store_true",
+        help="resume best model from default checkpoint",
+    )
+    parser.add_argument(
         "--evaluate", default=False, action="store_true", help="evaluate model test set"
     )
     parser.add_argument("--gpu", type=int, default=None, help="gpu to use")
@@ -121,9 +168,13 @@ def parse_option():
 
     args = parser.parse_args()
 
-    args.filename = "{}_{}_{}_{}_{}_{}_lr_{}_decay_{}_bsz_{}_warmup_{}_trial_{}".format(
+    args.filename = "{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_lr_{}_decay_{}_bsz_{}_warmup_{}_trial_{}".format(
+        args.prompt_type,  # Adam: add prompt type to avoid visual and deep prompting models overwriting each other
         args.method,
         args.prompt_size,
+        args.injection_layer,
+        args.prompt_num,
+        args.prompt_init_method,
         args.dataset,
         args.model,
         args.arch,
@@ -140,6 +191,11 @@ def parse_option():
     if not os.path.isdir(args.model_folder):
         os.makedirs(args.model_folder)
 
+    # Adam: option to easily resume from the best saved model for the given parameters to do additional evaluation
+    # without manually specifying the default file name in the job file
+    if args.resume_best:
+        args.resume = os.path.join(args.model_folder, "model_best.pth.tar")
+
     return args
 
 
@@ -155,7 +211,6 @@ def main():
     learn = Learner(args)
 
     if args.evaluate:
-
         # Load clip image transformation
         _, preprocess = clip.load(args.arch)
 
@@ -179,7 +234,7 @@ def main():
         #######################
         # TODO: Define `classnames` as a list of 10 + 100 class labels from CIFAR10 and CIFAR100
 
-        raise NotImplementedError
+        # Already done in the next line, nothing to do
         #######################
         # END OF YOUR CODE    #
         #######################
@@ -207,7 +262,12 @@ def main():
         # TODO: Compute the text features (for each of the prompts defined above) using CLIP
         # Note: This is similar to the code you wrote in `clipzs.py`
 
-        raise NotImplementedError
+        with torch.no_grad():
+            tokenized_prompts = torch.cat([clip.tokenize(p) for p in prompts]).to(
+                args.device
+            )
+            text_features = clip_model.encode_text(tokenized_prompts)
+            text_features /= text_features.norm(dim=-1, keepdim=True)
         #######################
         # END OF YOUR CODE    #
         #######################
@@ -223,7 +283,7 @@ def main():
         # That is, if a class in CIFAR100 corresponded to '4', it should now correspond to '14'
         # Set the result of this to the attribute cifar100_test.targets to override them
 
-        raise NotImplementedError
+        cifar100_test.targets = [target + 10 for target in cifar100_test.targets]
         #######################
         # END OF YOUR CODE    #
         #######################
@@ -256,13 +316,25 @@ def main():
         # - accurary_all = acc_cifar10 * (% of cifar10 samples) \
         #                  + acc_cifar100 * (% of cifar100 samples)
 
-        raise NotImplementedError
+        accuracy_all = (
+            acc_cifar10 * len(cifar10_test) + acc_cifar100 * len(cifar100_test)
+        ) / (len(cifar10_test) + len(cifar100_test))
         #######################
         # END OF YOUR CODE    #
         #######################
 
         print(f"TOP1 Accuracy on cifra10 + cifar100 is: {accuracy_all}")
-        exit()
+
+        # Adam: save results into a single directory to make it easier to plot in the end
+        results_dir = "results_cross_data"
+        os.makedirs(results_dir, exist_ok=True)
+
+        result = vars(args)
+        result["top1_test_acc_cross_data"] = accuracy_all
+        fn = f"cross_data_{args.dataset}_{args.prompt_type}_{args.method}_{args.prompt_num}_{args.injection_layer}_{args.prompt_size}_{args.prompt_init_method}_{args.test_noise}.json"
+        with open(f"{results_dir}/{fn}", "w") as f:
+            json.dump(result, f)
+
     else:
         raise ValueError("Enable flag --evaluate!")
 

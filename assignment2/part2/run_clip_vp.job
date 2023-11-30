@@ -66,5 +66,15 @@ for dataset in "${datasets[@]}"; do
             --resume_best \
             --test_noise
 
+        echo "Evaluating experiment on both data sets with $method and prompt size $prompt_size"
+        python $code_dir/cross_dataset.py \
+            $default_parameters \
+            --text_prompt_template "$text_prompt_template" \
+            --dataset $dataset \
+            --method $method \
+            --prompt_size $prompt_size \
+            --prompt_init_method $prompt_init_method \
+            --evaluate \
+            --resume_best
     done
 done

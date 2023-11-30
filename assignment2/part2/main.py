@@ -101,7 +101,7 @@ def parse_option():
     parser.add_argument(
         "--prompt_size", type=int, default=30, help="size for visual prompts"
     )
-    # Adam
+    # Adam:
     parser.add_argument(
         "--prompt_init_method",
         type=str,
@@ -110,7 +110,7 @@ def parse_option():
             "random",
             "empty",
         ],
-        help="choose visual prompting method",
+        help="initialization method for the visual prompts",
     )
     parser.add_argument(
         "--text_prompt_template",
@@ -149,6 +149,7 @@ def parse_option():
     parser.add_argument(
         "--resume", type=str, default=None, help="path to resume from checkpoint"
     )
+    # Adam: add flag to automatically resume the best model
     parser.add_argument(
         "--resume_best",
         default=False,
