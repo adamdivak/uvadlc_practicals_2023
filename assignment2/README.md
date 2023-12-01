@@ -1,3 +1,17 @@
+# Implementation notes
+
+- Q1.1. is self-contained in the notebook [part0_q11/DL1_Assignment2_Q1_1.ipynb](part0/DL1_Assignment2_Q1_1.ipynb)
+- All other experiments are implemented as Snellius jobs, so they are reproducible. 
+  - Resnet: [part1/run_resnet18.job](part1/run_resnet18.job)
+  - Zero-shot: [part2/run_clip_zs.job](part2/run_clip_zs.job)
+  - Visual prompting: [part2/run_clip_vp.job](part2/run_clip_vp.job)
+  - Deep prompting: [part2/run_clip_dp.job](part2/run_clip_dp.job)
+- Each execution saves its parameters and results as a small json file in order to make result collection easy. The results from my executions are in [snellius_results](snellius_results)
+- All results are collected, combined and visualized in the notebook [evaluate.ipynb](evaluate.ipynb)
+  - All plots are created with Plotly, so please install the `plotly` and `kaleido` packages if you want to reproduce them
+
+Thanks for checking this out!
+
 # Assignment 2: Transfer Learning for CNNs, Visual Prompting (and GNNs)
 
 The assignment is organized in two parts (as GNNs don't have any implementation questions). The first part covers transfer learning for CNNs, where you fine-tune an existing network to adapt it to a new dataset. In the second part, you prompt CLIP to perform image classification, both in the zero-shot setting and by learning a visual prompt.
