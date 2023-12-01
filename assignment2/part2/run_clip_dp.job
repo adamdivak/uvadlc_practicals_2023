@@ -35,7 +35,7 @@ mkdir -p $root
 datasets=(cifar10 cifar100)
 injection_layers=(0 2 4 6 8 10)
 
-default_parameters="--root $root --arch $arch --epochs $epochs --prompt_type deep_prompt --print_freq 100 --print_tqdm_interval 60"
+default_parameters="--root $root --arch $arch --epochs $epochs --patience 5 --prompt_type deep_prompt --print_freq 100 --print_tqdm_interval 60"
 
 for dataset in "${datasets[@]}"; do
     for injection_layer in "${injection_layers[@]}"; do

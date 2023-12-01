@@ -37,7 +37,7 @@ methods=(fixed_patch padding fixed_patch fixed_patch)
 prompt_sizes=(1 30 224 224)
 prompt_init_methods=(random random random empty)
 
-default_parameters="--root $root --arch $arch --epochs $epochs --print_freq 100 --print_tqdm_interval 60"
+default_parameters="--root $root --arch $arch --epochs $epochs --patience 5 --print_freq 100 --print_tqdm_interval 60"
 
 for dataset in "${datasets[@]}"; do
     for i in "${!methods[@]}"; do
