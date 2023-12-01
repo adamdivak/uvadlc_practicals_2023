@@ -233,9 +233,8 @@ class ZeroshotCLIP(nn.Module):
         with torch.no_grad():
             image_features = self.clip_model.encode_image(images)
             image_features /= image_features.norm(dim=-1, keepdim=True)
-            similarity = (
-                self.clip_model.logit_scale * image_features @ self.text_features.T
-            )
+            # do NOT use self.clip_model.logit_scale
+            similarity = self.logit_scale * image_features @ self.text_features.T
             return similarity
 
         #######################

@@ -133,7 +133,11 @@ class DeepPromptCLIP(nn.Module):
         # do NOT use image_features /= image_features.norm(dim=-1, keepdim=True) here, as the inplace operation
         # will break gradient calculation
         image_features = image_features / image_features.norm(dim=-1, keepdim=True)
-        similarity = self.clip_model.logit_scale * image_features @ self.text_features.T
+
+        # Originally I used self.clop_model.logit_scale. Apparently that's not the correct value, so I had
+        # to re-run everything with self.logit_scale
+        # do NOT use self.clip_model.logit_scale
+        similarity = self.logit_scale * image_features @ self.text_features.T
         return similarity
 
         #######################
