@@ -38,13 +38,13 @@ python3 $code_dir/clipzs.py --dataset cifar100 --split test --root $root
 
 # Zero-shot color
 echo "Zero-shot prompting for dominant image color:"
-python3 $code_dir/clipzs.py --prompt_template "{}" --class_names red green blue --visualize_predictions --root $root
-python3 $code_dir/clipzs.py --prompt_template "{0} {0} {0}" --class_names red green blue --visualize_predictions --root $root
-python3 $code_dir/clipzs.py --prompt_template "{0}" --class_names red_redish_pink_cherry green_greenish_olive_grassy blue_bluish_azure_navy --visualize_predictions --root $root
-python3 $code_dir/clipzs.py --prompt_template "The dominant color of the image is {}" --class_names red green blue --visualize_predictions --root $root
-python3 $code_dir/clipzs.py --prompt_template "The image is {}" --class_names redish greenish blueish --visualize_predictions --root $root
+python3 $code_dir/clipzs.py --prompt_template "{}" --class_names red green blue --dataset cifar100 --visualize_predictions --root $root
+python3 $code_dir/clipzs.py --prompt_template "{0} {0} {0}" --class_names red green blue --dataset cifar100 --visualize_predictions --root $root
+python3 $code_dir/clipzs.py --prompt_template "{0}" --class_names red_redish_pink_cherry green_greenish_olive_grassy blue_bluish_azure_navy --dataset cifar100 --visualize_predictions --root $root
+python3 $code_dir/clipzs.py --prompt_template "The dominant color of the image is {}" --class_names red green blue --dataset cifar100 --visualize_predictions --root $root
+python3 $code_dir/clipzs.py --prompt_template "The image is {}" --class_names redish greenish blueish --dataset cifar100 --visualize_predictions --root $root
 
 # Zero-shot man-made
 echo "Zero-shot prompting for natural vs man-made objects:"
-python3 $code_dir/clipzs.py --prompt_template "The main object on the image is {}" --class_names a_man-made_machine occurs_in_nature --visualize_predictions --root $root
+python3 $code_dir/clipzs.py --prompt_template "The main object on the image is {}" --class_names a_man-made_machine occurs_in_nature --dataset cifar100 --visualize_predictions --root $root
 
