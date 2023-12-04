@@ -1,1 +1,0 @@
-{"dataset": "cifar10", "augmentation_name": "my_augmentation", "test_noise": true, "test_accuracy": 0.4677}

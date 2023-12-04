@@ -1,1 +1,0 @@
-{"dataset": "cifar100", "augmentation_name": "auto_augment", "test_noise": false, "test_accuracy": 0.552}
