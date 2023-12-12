@@ -15,6 +15,7 @@
 ################################################################################
 
 import torch
+import torchvision.utils
 from torchvision.utils import make_grid
 import numpy as np
 
@@ -113,8 +114,30 @@ def visualize_manifold(decoder, grid_size=20):
     #######################
     # PUT YOUR CODE HERE  #
     #######################
-    img_grid = None
-    raise NotImplementedError
+    # percentiles
+    start = 0.5 / grid_size
+    end = (grid_size - 0.5) / grid_size
+    percentiles = torch.range(start, end, (end - start) / (grid_size - 1))
+
+    # normal
+    distribution = torch.distributions.Normal(torch.zeros((1, 1)), torch.eye(1))
+    norm_values = distribution.icdf(percentiles)
+
+    # combined over 2 dimensions
+    z_product = torch.cartesian_prod(norm_values[0], norm_values[0])
+
+    img_logits = decoder(z_product)
+    img_probs = torch.softmax(img_logits, dim=1)
+    # If probs is N-dimensional, the first N-1 dimensions are treated as a batch of relative probability vectors.
+    img_probs_reordered = torch.movedim(img_probs, 1, -1)
+
+    img_distributions = torch.distributions.Categorical(probs=img_probs_reordered)
+    imgs = img_distributions.sample()
+    imgs = torch.unsqueeze(imgs, 1)
+    imgs = imgs.float() / 15  # expects a float between 0-1
+    print(imgs.shape)
+    print(imgs)
+    img_grid = torchvision.utils.make_grid(imgs, nrow=grid_size)
     #######################
     # END OF YOUR CODE    #
     #######################

@@ -19,7 +19,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from utils import sample_reparameterize, KLD, elbo_to_bpd
+from utils import sample_reparameterize, KLD, elbo_to_bpd, visualize_manifold
 from cnn_encoder_decoder import CNNEncoder, CNNDecoder
 # import train_torch
 import train_pl
@@ -241,6 +241,15 @@ class TestVAE(unittest.TestCase):
         self.assertLessEqual(abs(bpd.item() - true_bpd), 1e-5,
                              msg="The BPD output for zero-initialized networks must be %f, but is %f." % (true_bpd, bpd.item()))
 
+
+# Not really a test, more like a dedicated runner
+class TestVisualizeManifold(unittest.TestCase):
+
+    @torch.no_grad()
+    def test_visualize_manifold(self):
+        np.random.seed(42)
+        torch.manual_seed(42)
+        visualize_manifold(CNNDecoder(z_dim=2), grid_size=3)
 
 
 
