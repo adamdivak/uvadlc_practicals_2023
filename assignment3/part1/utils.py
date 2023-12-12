@@ -30,13 +30,15 @@ def sample_reparameterize(mean, std):
         z - A sample of the distributions, with gradient support for both mean and std.
             The tensor should have the same shape as the mean and std input tensors.
     """
-    assert not (std < 0).any().item(), "The reparameterization trick got a negative std as input. " + \
-                                       "Are you sure your input is std and not log_std?"
+    assert not (std < 0).any().item(), (
+        "The reparameterization trick got a negative std as input. "
+        + "Are you sure your input is std and not log_std?"
+    )
     #######################
     # PUT YOUR CODE HERE  #
     #######################
-    z = None
-    raise NotImplementedError
+    epsilon = torch.randn(mean.shape, device=mean.device)
+    z = mean + std * epsilon
     #######################
     # END OF YOUR CODE    #
     #######################
@@ -58,8 +60,8 @@ def KLD(mean, log_std):
     #######################
     # PUT YOUR CODE HERE  #
     #######################
-    KLD = None
-    raise NotImplementedError
+    # \sum_{d=1}^{D} \frac{1}{2} \left( \exp(2 \log \sigma_{nd}) + \mu_{nd}^2 - 1 - 2\log \sigma_{nd} \right)
+    KLD = torch.sum(torch.exp(2 * log_std) + mean**2 - 1 - 2 * log_std, -1) / 2
     #######################
     # END OF YOUR CODE    #
     #######################
@@ -78,8 +80,9 @@ def elbo_to_bpd(elbo, img_shape):
     #######################
     # PUT YOUR CODE HERE  #
     #######################
-    bpd = None
-    raise NotImplementedError
+    b, c, h, w = img_shape
+    # bpd = nll \cdot \log_2(e) \cdot \left( \prod_{i=1}^{K} d_i \right)^{-1}
+    bpd = elbo * torch.log2(torch.Tensor([torch.e]).to(elbo.device)) / (c * h * w)
     #######################
     # END OF YOUR CODE    #
     #######################
@@ -117,4 +120,3 @@ def visualize_manifold(decoder, grid_size=20):
     #######################
 
     return img_grid
-

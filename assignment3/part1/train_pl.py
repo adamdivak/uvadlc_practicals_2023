@@ -31,7 +31,6 @@ from utils import *
 
 
 class VAE(pl.LightningModule):
-
     def __init__(self, num_filters, z_dim, lr):
         """
         PyTorch Lightning module that summarizes all components to train a VAE.
@@ -63,17 +62,21 @@ class VAE(pl.LightningModule):
         # - Implement the empty functions in utils.py before continuing
         # - The forward run consists of encoding the images, sampling in
         #   latent space, and decoding.
-        # - By default, torch.nn.functional.cross_entropy takes the mean accross
+        # - By default, torch.nn.functional.cross_entropy takes the mean across
         #   all axes. Do not forget to change the 'reduction' parameter to
         #   make it consistent with the loss definition of the assignment.
 
         #######################
         # PUT YOUR CODE HERE  #
         #######################
-        L_rec = None
-        L_reg = None
-        bpd = None
-        raise NotImplementedError
+        mean, log_std = self.encoder(imgs)
+        z = sample_reparameterize(mean, torch.exp(log_std))
+        rec_img_probs = self.decoder(z)
+
+        L_rec = torch.nn.functional.cross_entropy(rec_img_probs, imgs.squeeze(), reduction="none").sum(dim=[-1, -2]).mean()
+        L_reg = KLD(mean, log_std).mean()
+        L = L_rec + L_reg
+        bpd = elbo_to_bpd(L, imgs.shape)
         #######################
         # END OF YOUR CODE    #
         #######################
@@ -91,8 +94,9 @@ class VAE(pl.LightningModule):
         #######################
         # PUT YOUR CODE HERE  #
         #######################
-        x_samples = None
-        raise NotImplementedError
+        z = torch.randn(size=(batch_size, self.encoder.z_dim))
+        rec_img_probs = self.decoder(z)
+        x_samples = torch.argmax(rec_img_probs, dim=1, keepdim=True)
         #######################
         # END OF YOUR CODE    #
         #######################
@@ -128,7 +132,6 @@ class VAE(pl.LightningModule):
 
 
 class GenerateCallback(pl.Callback):
-
     def __init__(self, batch_size=64, every_n_epochs=5, save_to_disk=False):
         """
         Inputs:
@@ -255,4 +258,3 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     train_vae(args)
-
