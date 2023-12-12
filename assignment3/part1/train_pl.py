@@ -94,9 +94,19 @@ class VAE(pl.LightningModule):
         #######################
         # PUT YOUR CODE HERE  #
         #######################
-        z = torch.randn(size=(batch_size, self.encoder.z_dim))
-        rec_img_probs = self.decoder(z)
-        x_samples = torch.argmax(rec_img_probs, dim=1, keepdim=True)
+        # Sample latent
+        z = torch.randn(size=(batch_size, self.encoder.z_dim)).to(self.device)
+        # Decode
+        rec_img_logits = self.decoder(z)
+        # Softmax
+        rec_img_probs = torch.softmax(rec_img_logits, dim=1)
+        # Sample from per-pixel categorical
+        rec_img_probs_reordered = torch.movedim(rec_img_probs, 1, -1)
+        rec_img_distributions = torch.distributions.Categorical(probs=rec_img_probs_reordered)
+        rec_imgs = rec_img_distributions.sample()
+
+        rec_imgs = torch.unsqueeze(rec_imgs, 1)
+        x_samples = rec_imgs
         #######################
         # END OF YOUR CODE    #
         #######################
