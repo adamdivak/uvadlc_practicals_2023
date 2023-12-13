@@ -105,7 +105,7 @@ def visualize_manifold(decoder, grid_size=20):
     """
 
     ## Hints:
-    # - You can use the icdf method of the torch normal distribution  to obtain z values at percentiles.
+    # - You can use the icdf method of the torch normal distribution to obtain z values at percentiles.
     # - Use the range [0.5/grid_size, 1.5/grid_size, ..., (grid_size-0.5)/grid_size] for the percentiles.
     # - torch.meshgrid might be helpful for creating the grid of values
     # - You can use torchvision's function "make_grid" to combine the grid_size**2 images into a grid
@@ -114,29 +114,38 @@ def visualize_manifold(decoder, grid_size=20):
     #######################
     # PUT YOUR CODE HERE  #
     #######################
-    # percentiles
+    # Calculate percentiles
     start = 0.5 / grid_size
     end = (grid_size - 0.5) / grid_size
     percentiles = torch.range(start, end, (end - start) / (grid_size - 1))
 
-    # normal
+    # Calculate percentiles of the normal distribution - as the comment specifically mentioned it,
+    # I assume using torch.distributions is ok here
     distribution = torch.distributions.Normal(torch.zeros((1, 1)), torch.eye(1))
     norm_values = distribution.icdf(percentiles)
 
-    # combined over 2 dimensions
+    # Calculate all combinations of latent values over the grid
     z_product = torch.cartesian_prod(norm_values[0], norm_values[0])
 
+    # Calculate the images for the given latents
     img_logits = decoder(z_product)
     img_probs = torch.softmax(img_logits, dim=1)
     # If probs is N-dimensional, the first N-1 dimensions are treated as a batch of relative probability vectors.
     img_probs_reordered = torch.movedim(img_probs, 1, -1)
 
-    img_distributions = torch.distributions.Categorical(probs=img_probs_reordered)
-    imgs = img_distributions.sample()
-    imgs = torch.unsqueeze(imgs, 1)
-    imgs = imgs.float() / 15  # expects a float between 0-1
-    print(imgs.shape)
-    print(imgs)
+    # Ooops, no torch.distributions for us. Changed to torch.multinomial, which is equivalent.
+    # img_distributions = torch.distributions.Categorical(probs=img_probs_reordered)
+    # imgs = img_distributions.sample()
+    # imgs = torch.unsqueeze(imgs, 1)
+
+    # ..but torch.multinomial expects a 2d tensor for whatever reason, so we need a bit more dimension juggling
+    img_probs_reordered_2d = torch.reshape(img_probs_reordered, (-1, img_probs_reordered.shape[-1]))
+    imgs_2d = torch.multinomial(img_probs_reordered_2d, 1)
+    B, C, H, W = img_probs.shape
+    imgs = torch.reshape(imgs_2d, (B, 1, H, W))
+
+    imgs = imgs.float() / 15  # expects a float between 0-1, unlike in the sample() function..
+
     img_grid = torchvision.utils.make_grid(imgs, nrow=grid_size)
     #######################
     # END OF YOUR CODE    #

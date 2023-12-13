@@ -31,19 +31,24 @@ from utils import *
 
 
 class VAE(pl.LightningModule):
-    def __init__(self, num_filters, z_dim, lr):
+    def __init__(self, num_filters, z_dim, lr, reduction_strategy="sample"):
         """
         PyTorch Lightning module that summarizes all components to train a VAE.
         Inputs:
             num_filters - Number of channels to use in a CNN encoder/decoder
             z_dim - Dimensionality of latent space
             lr - Learning rate to use for the optimizer
+            reduction_strategy - Way to reduce the categorical distribution to final pixel
+                values. Options: "sample" for sampling from it, "argmax" for taking the maximum
+                value.
         """
         super().__init__()
         self.save_hyperparameters()
 
         self.encoder = CNNEncoder(z_dim=z_dim, num_filters=num_filters)
         self.decoder = CNNDecoder(z_dim=z_dim, num_filters=num_filters)
+
+        self.reduction_strategy = reduction_strategy
 
     def forward(self, imgs):
         """
@@ -97,18 +102,31 @@ class VAE(pl.LightningModule):
         # Sample latent
         z = torch.randn(size=(batch_size, self.encoder.z_dim)).to(self.device)
         # Decode
-        rec_img_logits = self.decoder(z)
-        # Softmax
-        rec_img_probs = torch.softmax(rec_img_logits, dim=1)
-        # move channel dimension to last dim, as that's what is expected by all torch.distributions
-        rec_img_probs_reordered = torch.movedim(rec_img_probs, 1, -1)
-        # Sample from per-pixel categorical
-        rec_img_distributions = torch.distributions.Categorical(probs=rec_img_probs_reordered)
-        rec_imgs = rec_img_distributions.sample()
+        img_logits = self.decoder(z)
 
-        # Add single channel dimension again
-        rec_imgs = torch.unsqueeze(rec_imgs, 1)
-        x_samples = rec_imgs
+        if self.reduction_strategy == "sample":
+            # Softmax
+            img_probs = torch.softmax(img_logits, dim=1)
+            # move channel dimension to last dim, as that's what is expected by all torch.distributions
+            img_probs_reordered = torch.movedim(img_probs, 1, -1)
+            # Sample from per-pixel categorical
+            # Ooops, no torch.distributions for us. Changed to torch.multinomial, which is equivalent.
+            # img_distributions = torch.distributions.Categorical(probs=img_probs_reordered)
+            # imgs = img_distributions.sample()
+            # Add single channel dimension again
+            # imgs = torch.unsqueeze(imgs, 1)
+
+            img_probs_reordered_2d = torch.reshape(img_probs_reordered, (-1, img_probs_reordered.shape[-1]))
+            imgs_2d = torch.multinomial(img_probs_reordered_2d, 1)
+            B, C, H, W = img_probs.shape
+            imgs = torch.reshape(imgs_2d, (B, 1, H, W))
+        elif self.reduction_strategy == "argmax":
+            imgs = torch.argmax(img_logits, dim=1, keepdim=True)
+        else:
+            raise NotImplementedError(f"Unknown reduction strategy {self.reduction_strategy}. "
+                                      f"Please specify 'sample' or 'argmax'")
+
+        x_samples = imgs
         #######################
         # END OF YOUR CODE    #
         #######################
@@ -214,7 +232,8 @@ def train_vae(args):
     pl.seed_everything(args.seed)  # To be reproducible
     model = VAE(num_filters=args.num_filters,
                 z_dim=args.z_dim,
-                lr=args.lr)
+                lr=args.lr,
+                reduction_strategy=args.reduction_strategy)
 
     # Training
     gen_callback.sample_and_save(trainer, model, epoch=0)  # Initial sample
@@ -244,6 +263,9 @@ if __name__ == '__main__':
                         help='Dimensionality of latent space')
     parser.add_argument('--num_filters', default=32, type=int,
                         help='Number of channels/filters to use in the CNN encoder/decoder.')
+    parser.add_argument('--reduction_strategy', choices=["sample", "argmax"],
+                        default="sample",
+                        help='Reduction strategy from the per-pixel categorical distribution')
 
     # Optimizer hyperparameters
     parser.add_argument('--lr', default=1e-3, type=float,
