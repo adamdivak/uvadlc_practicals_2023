@@ -16,7 +16,6 @@ import torch.nn as nn
 from torch.nn import functional as F
 
 
-
 class NewGELU(nn.Module):
     """
     Implementation of the GELU activation function currently in Google BERT repo (identical to OpenAI GPT).
@@ -70,12 +69,11 @@ class CausalSelfAttention(nn.Module):
         self.n_embd = config.n_embd
 
     def forward(self, x):
-        
-        batch_size, seq_len, n_embd = x.size() # batch size, sequence length, embedding dimensionality (n_embd)
+        batch_size, seq_len, n_embd = x.size()  # batch size, sequence length, embedding dimensionality (n_embd)
 
         # calculate query, key, values for all heads in batch and move head forward to be the batch dim
         # Split output of attention-head in query, key and value
-        q, k ,v  = self.c_attn(x).split(self.n_embd, dim=2)
+        q, k, v = self.c_attn(x).split(self.n_embd, dim=2)
 
         # Bring k,q,v in right shape  (B, nh, T, hs)
         k = k.view(batch_size, seq_len, self.n_head, n_embd // self.n_head).transpose(1, 2) 
@@ -85,12 +83,22 @@ class CausalSelfAttention(nn.Module):
         # causal self-attention; Self-attend: (B, nh, T, hs) x (B, nh, hs, T) -> (B, nh, T, T)
         # - Calculate attention weights using key and queries
         # - Mask the calculated attention weights with the mask parameter.
-        # - Apply dropout to the weigths
+        # - Apply dropout to the weights
         # - Apply attention to the values (B, nh, T, T) x (B, nh, T, hs) -> (B, nh, T, hs)
+
         #######################
         # PUT YOUR CODE HERE  #
         #######################
-        raise NotImplementedError
+        # Is this the correct order? QK^T -> scaling -> masking -> softmax -> dropout -> apply to V
+        # Are we still scaling with the fixed size sqrt(d_k), even though we applied masking and dropout?
+        qk = q @ k.transpose(2, 3) * (1.0 / math.sqrt(k.size(-1)))
+        # qk_masked = qk.masked_fill(~self.mask, -torch.inf) # does not work like this, as mask is float,
+        # can't be binary-inverted. I could re-create a different mask, but I guess that wasn't the intention.
+        qk_masked = qk.masked_fill(self.mask[:, :, :seq_len, :seq_len] == 0, float('-inf'))
+        qk_masked_probs = F.softmax(qk_masked, dim=-1)
+        qk_masked_probs_do = self.attn_dropout(qk_masked_probs)
+
+        y = qk_masked_probs_do @ v
         #######################
         # END OF YOUR CODE    #
         #######################
@@ -333,7 +341,7 @@ class GPT(nn.Module):
         assert t <= self.block_size, f"Cannot forward sequence of length {t}, block size is only {self.block_size}"
         pos = torch.arange(0, t, dtype=torch.long, device=device).unsqueeze(0) # shape (1, t)
 
-        # Forwawrd token and position embedders
+        # Forward token and position embedders
         # token embeddings of shape (b, t, n_embd)
         # position embeddings of shape (1, t, n_embd)
         tok_emb = self.transformer.wte(idx) 
@@ -392,7 +400,21 @@ class GPT(nn.Module):
             #######################
             # PUT YOUR CODE HERE  #
             #######################
-            raise NotImplementedError
+            # - forward the model to get the logits for the index in the sequence
+            logits = self.forward(idx_cond)  # (batch_size, sequence_length, vocabulary_size)
+            # - pluck the logits at the final step and scale by desired temperature
+            scaled_final_logits = logits[:, -1, :] / temperature
+            # - optionally only consider top-k logits for sampling.
+            if top_k is not None:
+                topk_values, topk_indices = torch.topk(scaled_final_logits, top_k, dim=-1)
+                scaled_final_logits[scaled_final_logits < topk_values[:, [-1]]] = -float('Inf')
+            # - apply softmax to convert logits to (normalized) probabilities
+            probs = torch.softmax(scaled_final_logits, dim=-1)
+            if do_sample:
+                next_words = torch.multinomial(probs, 1)
+            else:
+                next_words = torch.argmax(probs, -1)
+            idx = torch.concat((idx, next_words), dim=-1)
             #######################
             # END OF YOUR CODE    #
             #######################
