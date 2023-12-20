@@ -269,7 +269,7 @@ class AdversarialAE(nn.Module):
         discriminator_preds_fake = torch.sigmoid(self.discriminator(z_fake))
         gen_loss = -torch.log(1 - discriminator_preds_fake).mean()
 
-        # loss for "real" latents - eq 17 - that's not here
+        # loss for "real" latents - eq 17 - that's not here? I'm still confused by these losses :(
         # discriminator_preds_real = self.discriminator(torch.randn(z_fake.shape))
         # loss_real = torch.log(discriminator_preds_real)
         # print("loss_real", loss_real)

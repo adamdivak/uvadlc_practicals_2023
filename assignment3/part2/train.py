@@ -104,7 +104,8 @@ def train_aae(epoch, model, train_loader,
         optimizer_ae.zero_grad()
         recon_batch, z_fake = model(x)
         ae_loss, ae_dict = model.get_loss_autoencoder(x, recon_batch, z_fake, lambda_)
-        ae_loss.backward(retain_graph=True)
+        ae_loss.backward()  # add retain_graph=True to do both optimizer update steps together in the end
+        optimizer_ae.step()
         logger_ae.add_values(ae_dict)
         #######################
         # END OF YOUR CODE    #
@@ -115,10 +116,11 @@ def train_aae(epoch, model, train_loader,
         #######################
         # Discriminator update
         optimizer_disc.zero_grad()
+        recon_batch, z_fake = model(x)  # either calculate a new z_fake here or do both optimizer update steps below
         disc_loss, disc_dict = model.get_loss_discriminator(z_fake)
         disc_loss.backward()
 
-        optimizer_ae.step()
+        # optimizer_ae.step()  # see previous comments
         optimizer_disc.step()
         logger_disc.add_values(disc_dict)
         #######################
@@ -145,6 +147,7 @@ def get_device() -> str:
         else:
             device = "mps"
     return device
+
 
 def main(args):
     """
@@ -208,7 +211,7 @@ def main(args):
     logger_disc = TensorBoardLogger(summary_writer, name="discriminator")
 
     # Initial generation before training
-    generate_and_save(model, 0, summary_writer, args.batch_size)
+    generate_and_save(model, 0, summary_writer)
 
     # Training loop
     print(f"Using device {device}")
