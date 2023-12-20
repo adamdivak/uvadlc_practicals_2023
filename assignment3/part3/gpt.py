@@ -89,8 +89,6 @@ class CausalSelfAttention(nn.Module):
         #######################
         # PUT YOUR CODE HERE  #
         #######################
-        # Is this the correct order? QK^T -> scaling -> masking -> softmax -> dropout -> apply to V
-        # Are we still scaling with the fixed size sqrt(d_k), even though we applied masking and dropout?
         qk = q @ k.transpose(2, 3) * (1.0 / math.sqrt(k.size(-1)))
         # qk_masked = qk.masked_fill(~self.mask, -torch.inf) # does not work like this, as mask is float,
         # can't be binary-inverted. I could re-create a different mask, but I guess that wasn't the intention.
