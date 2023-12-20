@@ -101,7 +101,11 @@ def train_aae(epoch, model, train_loader,
         # PUT YOUR CODE HERE  #
         #######################
         # Encoder-Decoder update
-        raise NotImplementedError
+        optimizer_ae.zero_grad()
+        recon_batch, z_fake = model(x)
+        ae_loss, ae_dict = model.get_loss_autoencoder(x, recon_batch, z_fake, lambda_)
+        ae_loss.backward(retain_graph=True)
+        logger_ae.add_values(ae_dict)
         #######################
         # END OF YOUR CODE    #
         #######################
@@ -110,7 +114,13 @@ def train_aae(epoch, model, train_loader,
         # PUT YOUR CODE HERE  #
         #######################
         # Discriminator update
-        raise NotImplementedError
+        optimizer_disc.zero_grad()
+        disc_loss, disc_dict = model.get_loss_discriminator(z_fake)
+        disc_loss.backward()
+
+        optimizer_ae.step()
+        optimizer_disc.step()
+        logger_disc.add_values(disc_dict)
         #######################
         # END OF YOUR CODE    #
         #######################
@@ -120,6 +130,21 @@ def train_aae(epoch, model, train_loader,
             save_reconstruction(model, epoch, logger_ae.summary_writer, x)
     print('====> Epoch {} : Average loss: {:.4f}'.format(epoch, train_loss / len(train_loader)))
 
+
+def get_device() -> str:
+    """Returns the device for PyTorch to use."""
+    device = "cpu"
+    if torch.cuda.is_available():
+        device = "cuda"
+    # mac MPS support: https://pytorch.org/docs/stable/notes/mps.html
+    elif torch.backends.mps.is_available():
+        if not torch.backends.mps.is_built():
+            print(
+                "MPS not available because the current PyTorch install was not built with MPS enabled."
+            )
+        else:
+            device = "mps"
+    return device
 
 def main(args):
     """
@@ -156,7 +181,8 @@ def main(args):
                          num_workers=args.num_workers)
 
     args.cuda = not args.no_cuda and torch.cuda.is_available()
-    device = torch.device("cuda:0" if args.cuda else "cpu")
+    # device = torch.device("cuda:0" if args.cuda else "cpu")
+    device = get_device()
 
     # Create model
     model = AdversarialAE(z_dim=args.z_dim)
@@ -168,9 +194,9 @@ def main(args):
     #######################
     # You can use the Adam optimizer for autoencoder and SGD for discriminator.
     # It is recommended to reduce the momentum (beta1) to e.g. 0.5 for Adam optimizer.
-    optimizer_ae = None
-    optimizer_disc = None
-    raise NotImplementedError
+    optimizer_ae = optim.Adam(list(model.encoder.parameters()) + list(model.decoder.parameters()), lr=args.ae_lr,
+                              betas=(0.5, 0.999))
+    optimizer_disc = optim.SGD(model.discriminator.parameters(), lr=args.d_lr)
     #######################
     # END OF YOUR CODE    #
     #######################

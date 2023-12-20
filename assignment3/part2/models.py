@@ -20,7 +20,12 @@ import torch.nn.functional as F
 
 
 class ConvEncoder(nn.Module):
-    def __init__(self, z_dim):
+    def __init__(self,
+                 z_dim: int,
+                 num_input_channels: int = 1,
+                 num_filters: int = 32,
+                 act_fn: object = nn.ReLU
+                 ):
         """
         Convolutional Encoder network with Convolution and Linear layers, ReLU activations. The output layer
         uses a Fully connected layer to embed the representation to a latent code with z_dim dimension.
@@ -28,13 +33,34 @@ class ConvEncoder(nn.Module):
             z_dim - Dimensionality of the latent code space.
         """
         super(ConvEncoder, self).__init__()
-        # For an intial architecture, you can use the encoder of Tutorial 9.
+        # For an initial architecture, you can use the encoder of Tutorial 9.
         # Feel free to experiment with the architecture yourself, but the one specified here is
         # sufficient for the assignment.
         #######################
         # PUT YOUR CODE HERE  #
         #######################
-        raise NotImplementedError
+        self.z_dim = z_dim
+        c_hid = num_filters
+        self.net = nn.Sequential(
+            nn.Conv2d(
+                num_input_channels, c_hid, kernel_size=3, padding=1, stride=2
+            ),  # 32x32 => 16x16
+            act_fn(),
+            nn.Conv2d(c_hid, c_hid, kernel_size=3, padding=1),
+            act_fn(),
+            nn.Conv2d(
+                c_hid, 2 * c_hid, kernel_size=3, padding=1, stride=2
+            ),  # 16x16 => 8x8
+            act_fn(),
+            nn.Conv2d(2 * c_hid, 2 * c_hid, kernel_size=3, padding=1),
+            act_fn(),
+            nn.Conv2d(
+                2 * c_hid, 2 * c_hid, kernel_size=3, padding=1, stride=2
+            ),  # 8x8 => 4x4
+            act_fn(),
+            nn.Flatten(),  # Image grid to single feature vector
+            nn.Linear(2 * 16 * c_hid, z_dim),
+        )
         #######################
         # END OF YOUR CODE    #
         #######################
@@ -49,8 +75,7 @@ class ConvEncoder(nn.Module):
         #######################
         # PUT YOUR CODE HERE  #
         #######################
-        x = None
-        raise NotImplementedError
+        z = self.net(x)
         #######################
         # END OF YOUR CODE    #
         #######################
@@ -65,7 +90,11 @@ class ConvEncoder(nn.Module):
 
 
 class ConvDecoder(nn.Module):
-    def __init__(self, z_dim):
+    def __init__(self, z_dim: int,
+                 num_input_channels: int = 1,
+                 num_filters: int = 32,
+                 act_fn: object = nn.ReLU,
+                 ):
         """
         Convolutional Decoder network with linear and deconvolution layers and ReLU activations. The output layer
         uses a Tanh activation function to scale the output between -1 and 1.
@@ -73,14 +102,43 @@ class ConvDecoder(nn.Module):
               z_dim - Dimensionality of the latent code space.
         """
         super(ConvDecoder, self).__init__()
-        # For an intial architecture, you can use the decoder of Tutorial 9. You can set the
+        # For an initial architecture, you can use the decoder of Tutorial 9. You can set the
         # output padding in the first transposed convolution to 0 to get 28x28 outputs.
         # Feel free to experiment with the architecture yourself, but the one specified here is
         # sufficient for the assignment.
         #######################
         # PUT YOUR CODE HERE  #
         #######################
-        raise NotImplementedError
+        c_hid = num_filters
+        self.linear = nn.Sequential(nn.Linear(z_dim, 2 * 16 * c_hid), act_fn())
+        self.net = nn.Sequential(
+            nn.ConvTranspose2d(
+                2 * c_hid,
+                2 * c_hid,
+                kernel_size=3,
+                output_padding=0,  # was originally 1
+                padding=1,
+                stride=2,
+            ),  # 4x4 => 8x8
+            act_fn(),
+            nn.Conv2d(2 * c_hid, 2 * c_hid, kernel_size=3, padding=1),
+            act_fn(),
+            nn.ConvTranspose2d(
+                2 * c_hid, c_hid, kernel_size=3, output_padding=1, padding=1, stride=2
+            ),  # 8x8 => 16x16
+            act_fn(),
+            nn.Conv2d(c_hid, c_hid, kernel_size=3, padding=1),
+            act_fn(),
+            nn.ConvTranspose2d(
+                c_hid,
+                num_input_channels,
+                kernel_size=3,
+                output_padding=1,
+                padding=1,
+                stride=2,
+            ),  # 16x16 => 32x32
+            nn.Tanh(),  # The input images is scaled between -1 and 1, hence the output has to be bounded as well
+        )
         #######################
         # END OF YOUR CODE    #
         #######################
@@ -95,8 +153,9 @@ class ConvDecoder(nn.Module):
         #######################
         # PUT YOUR CODE HERE  #
         #######################
-        recon_x = None
-        raise NotImplementedError
+        x = self.linear(z)
+        x = x.reshape(x.shape[0], -1, 4, 4)
+        recon_x = self.net(x)
         #######################
         # END OF YOUR CODE    #
         #######################
@@ -104,7 +163,7 @@ class ConvDecoder(nn.Module):
 
 
 class Discriminator(nn.Module):
-    def __init__(self, z_dim):
+    def __init__(self, z_dim: int):
         """
         Discriminator network with linear layers and LeakyReLU activations.
         Inputs:
@@ -117,7 +176,14 @@ class Discriminator(nn.Module):
         #######################
         # PUT YOUR CODE HERE  #
         #######################
-        raise NotImplementedError
+        hidden_size = 512
+        self.net = nn.Sequential(
+            nn.Linear(z_dim, hidden_size),
+            nn.LeakyReLU(negative_slope=0.2),
+            nn.Linear(hidden_size, hidden_size),
+            nn.LeakyReLU(negative_slope=0.2),
+            nn.Linear(hidden_size, 1),
+        )
         #######################
         # END OF YOUR CODE    #
         #######################
@@ -133,8 +199,7 @@ class Discriminator(nn.Module):
         #######################
         # PUT YOUR CODE HERE  #
         #######################
-        preds = None
-        raise NotImplementedError
+        preds = self.net(z)
         #######################
         # END OF YOUR CODE    #
         #######################
@@ -172,9 +237,9 @@ class AdversarialAE(nn.Module):
         #######################
         # PUT YOUR CODE HERE  #
         #######################
-        recon_x_ = None
-        z = None
-        raise NotImplementedError
+        z = self.encoder(x)
+        # FIXME no sampling here?
+        recon_x = self.decoder(z)
         #######################
         # END OF YOUR CODE    #
         #######################
@@ -197,17 +262,29 @@ class AdversarialAE(nn.Module):
         #######################
         # PUT YOUR CODE HERE  #
         #######################
-        ae_loss = None
-        logging_dict = {"gen_loss": None,
-                        "recon_loss": None,
-                        "ae_loss": None}
-        raise NotImplementedError
+        # reconstruction loss - eq 18
+        reconstruction_loss = torch.square((x - recon_x)).mean()
+
+        # loss for "fake" latents - eq 16
+        discriminator_preds_fake = torch.sigmoid(self.discriminator(z_fake))
+        gen_loss = -torch.log(1 - discriminator_preds_fake).mean()
+
+        # loss for "real" latents - eq 17 - that's not here
+        # discriminator_preds_real = self.discriminator(torch.randn(z_fake.shape))
+        # loss_real = torch.log(discriminator_preds_real)
+        # print("loss_real", loss_real)
+
+        ae_loss = lambda_ * reconstruction_loss + (1 - lambda_) * gen_loss
+
+        logging_dict = {"gen_loss": gen_loss,
+                        "recon_loss": reconstruction_loss,
+                        "ae_loss": ae_loss}
         #######################
         # END OF YOUR CODE    #
         #######################
         return ae_loss, logging_dict
 
-    def get_loss_discriminator(self,  z_fake):
+    def get_loss_discriminator(self, z_fake):
         """
         Inputs:
             z_fake - Batch of latent codes for fake samples. Shape: [B,z_dim]
@@ -223,12 +300,21 @@ class AdversarialAE(nn.Module):
         #######################
         # PUT YOUR CODE HERE  #
         #######################
-        disc_loss = None
-        logging_dict = {"disc_loss": None,
-                        "loss_real": None,
-                        "loss_fake": None,
-                        "accuracy": None}
-        raise NotImplementedError
+        z_real = torch.randn_like(z_fake, device=self.device)
+        real_preds = self.discriminator(z_real)
+        fake_preds = self.discriminator(z_fake)
+        real = torch.ones((z_fake.shape[0], 1), device=self.device)
+        fake = torch.zeros((z_fake.shape[0], 1), device=self.device)
+
+        loss_real = F.binary_cross_entropy_with_logits(real_preds, real)
+        loss_fake = F.binary_cross_entropy_with_logits(fake_preds, fake)
+        disc_loss = (loss_real + loss_fake) * .5
+        accuracy = ((real_preds > 0).sum() + (fake_preds < 0).sum()) / (2 * z_fake.shape[0])
+
+        logging_dict = {"disc_loss": disc_loss,
+                        "loss_real": loss_real,
+                        "loss_fake": loss_fake,
+                        "accuracy": accuracy}
         #######################
         # END OF YOUR CODE    #
         #######################
@@ -247,8 +333,8 @@ class AdversarialAE(nn.Module):
         #######################
         # PUT YOUR CODE HERE  #
         #######################
-        x = None
-        raise NotImplementedError
+        z = torch.randn(batch_size, self.z_dim, device=self.device)
+        x = self.decoder(z)
         #######################
         # END OF YOUR CODE    #
         #######################
